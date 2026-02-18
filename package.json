@@ -1,0 +1,115 @@
+{
+  "name": "hacking-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hacking Simulator - An interactive cybersecurity training game",
+  "main": "public/electron.js",
+  "homepage": "./",
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-scripts": "^5.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^40.4.1",
+    "electron-builder": "^26.8.1",
+    "electron-is-dev": "^2.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"BROWSER=none npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "dist": "npm run build && electron-builder --publish=never",
+    "dist:linux-x64": "npm run build && electron-builder --linux --x64",
+    "dist:linux-arm64": "npm run build && electron-builder --linux --arm64",
+    "dist:linux-all": "npm run build && electron-builder --linux --x64 --arm64",
+    "dist:win-x64": "npm run build && electron-builder --win --x64",
+    "dist:win-arm64": "npm run build && electron-builder --win --arm64",
+    "dist:win-all": "npm run build && electron-builder --win --x64 --arm64",
+    "dist:mac-x64": "npm run build && electron-builder --mac --x64",
+    "dist:mac-arm64": "npm run build && electron-builder --mac --arm64",
+    "dist:mac-universal": "npm run build && electron-builder --mac --universal",
+    "dist:all": "npm run build && electron-builder -mwl --x64 --arm64"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "build": {
+    "appId": "com.hackingsimulator.app",
+    "productName": "Hacking Simulator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "public/preload.js",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "icon": "public/icon.icns",
+      "category": "public.app-category.games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "icon": "public/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "public/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "Game"
+    }
+  }
+}
