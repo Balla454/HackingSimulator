@@ -166,7 +166,7 @@ const PhishingSimulator = ({ onPhishingComplete, addOutput, target, gameState })
     // Simulate phishing campaign
     const interval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + 10;
+        const newProgress = prev + 20;
         if (newProgress >= 100) {
           clearInterval(interval);
           setIsLaunching(false);
@@ -229,7 +229,7 @@ const PhishingSimulator = ({ onPhishingComplete, addOutput, target, gameState })
         }
         return newProgress;
       });
-    }, 300);
+    }, 600);
   };
 
   const generatePassword = (target) => {

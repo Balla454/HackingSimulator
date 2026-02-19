@@ -483,7 +483,7 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
     if (!isRunning) return;
 
     const interval = setInterval(() => {
-      setTimeElapsed(prev => prev + 0.1);
+      setTimeElapsed(prev => prev + 0.3);
       
       try {
         switch (attackMethod) {
@@ -509,7 +509,7 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
           onFailure('Attack simulation error');
         }
       }
-    }, 100);
+    }, 300);
 
     return () => clearInterval(interval);
   }, [isRunning, attackMethod, performBruteForceStep, performDictionaryStep, performRainbowStep, performHybridStep, onFailure]);

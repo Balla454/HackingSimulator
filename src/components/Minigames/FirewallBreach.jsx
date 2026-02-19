@@ -131,7 +131,7 @@ const FirewallBreach = ({ gameState, onFirewallComplete, addOutput, targetIp }) 
     // Simulate breach attempt with progress
     const interval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + 10;
+        const newProgress = prev + 25;
         if (newProgress >= 100) {
           clearInterval(interval);
           setIsBreaching(false);
@@ -180,7 +180,7 @@ const FirewallBreach = ({ gameState, onFirewallComplete, addOutput, targetIp }) 
         }
         return newProgress;
       });
-    }, 200);
+    }, 500);
   };
 
   return (

@@ -400,7 +400,7 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
           
           return newProgress;
         });
-      }, 200);
+      }, 500); // Reduced from 200ms for Pi 4 performance
       
       setIntervalId(interval);
     }, 2000);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 
 const SocialEngineering = ({ 
   onComplete, 
@@ -6,7 +6,7 @@ const SocialEngineering = ({
   phishingData = null,
   gameState = {}
 }) => {
-  const generateTargets = () => {
+  const generateTargets = useCallback(() => {
     const baseTargets = [
       {
         id: 'sarah_mitchell',
@@ -75,9 +75,9 @@ const SocialEngineering = ({
     ];
 
     return baseTargets;
-  };
+  }, []);
 
-  const socialTargets = generateTargets();
+  const socialTargets = useMemo(() => generateTargets(), [generateTargets]);
   
   const [currentStep, setCurrentStep] = useState('target_selection'); // target_selection, approach_selection, conversation, results
   const [selectedTarget, setSelectedTarget] = useState(
@@ -92,7 +92,7 @@ const SocialEngineering = ({
   const [socialResults, setSocialResults] = useState(null);
   const [conversationTurn, setConversationTurn] = useState(0);
 
-  const selectMissionContext = () => {
+  const selectMissionContext = useCallback(() => {
     const contexts = [
       {
         title: 'Corporate Espionage',
@@ -118,9 +118,9 @@ const SocialEngineering = ({
     ];
     
     return contexts[Math.floor(Math.random() * contexts.length)];
-  };
+  }, []);
 
-  const missionContext = selectMissionContext();
+  const missionContext = useMemo(() => selectMissionContext(), [selectMissionContext]);
 
   const approaches = [
     {

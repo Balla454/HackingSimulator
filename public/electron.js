@@ -1,6 +1,5 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
 const { exec } = require('child_process');
 
 let mainWindow;
@@ -38,6 +37,7 @@ function createWindow() {
   });
 
   // Load the app
+  const isDev = !app.isPackaged;
   const startUrl = isDev 
     ? 'http://localhost:3000' 
     : `file://${path.join(__dirname, '../build/index.html')}`;

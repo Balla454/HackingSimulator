@@ -10,6 +10,19 @@ function App() {
   const [loadingSubtext, setLoadingSubtext] = useState('');
   const [devModeOpen, setDevModeOpen] = useState(false);
 
+  // Fix for 100vh issues in Electron/Linux
+  useEffect(() => {
+    const handleResize = () => {
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial call
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Keyboard shortcut: Shift+Ctrl+| to toggle dev mode
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -129,7 +142,7 @@ function App() {
   }
 
   return (
-    <div className="App">
+    <div className="app">
       <Terminal />
       <DevModeOverlay isOpen={devModeOpen} onClose={() => setDevModeOpen(false)} />
     </div>

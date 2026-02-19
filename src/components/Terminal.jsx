@@ -2315,7 +2315,6 @@ Good luck, shadow.
           addOutput('');
           break;
         case 'risk':
-        case 'assessment':
           // Comprehensive risk factor analysis
           addOutput('\n🎯 COMPREHENSIVE RISK ASSESSMENT:');
           addOutput('═'.repeat(50));
@@ -2491,9 +2490,6 @@ Good luck, shadow.
         case 'tips':
         case 'hints':
           showAdvancedTips();
-          break;
-        case 'tutorial':
-          showInteractiveTutorial();
           break;
         case 'network':
           if (args.length === 0) {
@@ -3627,13 +3623,37 @@ Good luck, shadow.
     return () => clearInterval(threatEscalationInterval);
   }, [activeGame, escalateSecurityAlert, addOutput]);
 
+  // Memoize the overlay so it doesn't re-render when output state changes
+  const minigameOverlay = useMemo(() => {
+    if (!activeGame) return null;
+    return (
+      <div className="minigame-overlay">
+        <div className="minigame-container">
+          <div className="minigame-header">
+            <h3>{activeGame.name}</h3>
+            <button
+              className="close-minigame"
+              onClick={() => setActiveGame(null)}
+              aria-label="Close minigame"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="minigame-content">
+            {activeGame.component && React.createElement(activeGame.component, activeGame.props || {})}
+          </div>
+        </div>
+      </div>
+    );
+  }, [activeGame]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="terminal-container">
       <div className="terminal-wrapper">
         <div className="terminal-header">
           <div className="terminal-title">
             <span className="terminal-icon">⚡</span>
-            SHADOWNET TERMINAL v2.1.3
+            <span className="terminal-name">SHADOWNET TERMINAL v2.1.3</span>
             <span className="connection-status">● SECURE CONNECTION</span>
           </div>
           <div className="terminal-stats">
@@ -3676,25 +3696,7 @@ Good luck, shadow.
         </div>
       </div>
 
-      {activeGame && (
-        <div className="minigame-overlay">
-          <div className="minigame-container">
-            <div className="minigame-header">
-              <h3>{activeGame.name}</h3>
-              <button 
-                className="close-minigame"
-                onClick={() => setActiveGame(null)}
-                aria-label="Close minigame"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="minigame-content">
-              {activeGame.component && React.createElement(activeGame.component, activeGame.props || {})}
-            </div>
-          </div>
-        </div>
-      )}
+      {minigameOverlay}
     </div>
   );
 };

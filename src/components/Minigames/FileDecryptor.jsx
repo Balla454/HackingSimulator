@@ -112,7 +112,7 @@ const FileDecryptor = ({ gameState, onDecryptComplete, addOutput }) => {
     // Simulate decryption progress
     const interval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + 5;
+        const newProgress = prev + 20;
         if (newProgress >= 100) {
           clearInterval(interval);
           addOutput(`Successfully decrypted ${selectedFile.name}!`);
@@ -122,7 +122,7 @@ const FileDecryptor = ({ gameState, onDecryptComplete, addOutput }) => {
         }
         return newProgress;
       });
-    }, 100);
+    }, 400);
   };
 
   const availableKeys = getAllAvailableKeys();

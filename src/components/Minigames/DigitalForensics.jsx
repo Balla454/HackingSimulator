@@ -144,7 +144,7 @@ const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }
         
         return Math.min(newProgress, 30);
       });
-    }, 300);
+    }, 600);
   };
 
   const startExtraction = () => {
@@ -174,7 +174,7 @@ const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }
         
         return Math.min(newProgress, 80);
       });
-    }, 400);
+    }, 800);
   };
 
   const startAnalysis = () => {
@@ -211,7 +211,7 @@ const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }
         
         return Math.min(newProgress, 100);
       });
-    }, 250);
+    }, 500);
   };
 
   const generateForensicFindings = () => {

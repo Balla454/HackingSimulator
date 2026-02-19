@@ -3,68 +3,43 @@
   "version": "1.0.0",
   "private": true,
   "description": "Hacking Simulator - An interactive cybersecurity training game",
-  "main": "public/electron.js",
-  "homepage": "./",
+  "main": "dist-electron/main.js",
   "dependencies": {
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-scripts": "^5.0.1"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0",
+    "@vitejs/plugin-react": "^5.1.4",
     "electron": "^40.4.1",
     "electron-builder": "^26.8.1",
-    "electron-is-dev": "^2.0.0",
-    "wait-on": "^7.2.0"
+    "vite": "^7.3.1",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "electron": "electron .",
-    "electron-dev": "concurrently \"BROWSER=none npm start\" \"wait-on http://localhost:3000 && electron .\"",
-    "dist": "npm run build && electron-builder --publish=never",
-    "dist:linux-x64": "npm run build && electron-builder --linux --x64",
-    "dist:linux-arm64": "npm run build && electron-builder --linux --arm64",
-    "dist:linux-all": "npm run build && electron-builder --linux --x64 --arm64",
-    "dist:win-x64": "npm run build && electron-builder --win --x64",
-    "dist:win-arm64": "npm run build && electron-builder --win --arm64",
-    "dist:win-all": "npm run build && electron-builder --win --x64 --arm64",
-    "dist:mac-x64": "npm run build && electron-builder --mac --x64",
-    "dist:mac-arm64": "npm run build && electron-builder --mac --arm64",
-    "dist:mac-universal": "npm run build && electron-builder --mac --universal",
-    "dist:all": "npm run build && electron-builder -mwl --x64 --arm64"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "dev": "vite",
+    "build": "vite build",
+    "dist": "vite build && electron-builder --publish=never",
+    "dist:linux-x64": "vite build && electron-builder --linux --x64",
+    "dist:linux-arm64": "vite build && electron-builder --linux --arm64",
+    "dist:linux-all": "vite build && electron-builder --linux --x64 --arm64",
+    "dist:win-x64": "vite build && electron-builder --win --x64",
+    "dist:win-arm64": "vite build && electron-builder --win --arm64",
+    "dist:win-all": "vite build && electron-builder --win --x64 --arm64",
+    "dist:mac-x64": "vite build && electron-builder --mac --x64",
+    "dist:mac-arm64": "vite build && electron-builder --mac --arm64",
+    "dist:mac-universal": "vite build && electron-builder --mac --universal",
+    "dist:all": "vite build && electron-builder -mwl --x64 --arm64"
   },
   "build": {
     "appId": "com.hackingsimulator.app",
     "productName": "Hacking Simulator",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
-      "build/**/*",
-      "public/electron.js",
-      "public/preload.js",
-      "node_modules/**/*"
+      "dist-electron/**/*",
+      "dist/**/*"
     ],
     "mac": {
       "icon": "public/icon.icns",
