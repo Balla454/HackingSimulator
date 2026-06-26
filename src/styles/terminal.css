@@ -67,6 +67,15 @@ body {
   overflow: hidden;
 }
 
+/* K-5: lay the Cyber HQ panel beside the terminal instead of stacking it */
+.terminal-container.tier-k5 {
+  flex-direction: row;
+}
+
+.terminal-container.tier-k5 .terminal-wrapper {
+  min-width: 0;
+}
+
 /* Terminal Header */
 .terminal-header {
   min-height: clamp(45px, 6vh, 90px);
@@ -296,6 +305,242 @@ body {
 
 .terminal-input::placeholder {
   color: rgba(0, 255, 65, 0.5);
+}
+
+.quick-command-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(4px, 0.8vw, 10px);
+  padding: clamp(4px, 0.8vw, 10px) clamp(6px, 1vw, 12px);
+  margin-top: clamp(4px, 0.6vw, 8px);
+  flex-shrink: 0;
+}
+
+.quick-cmd-btn {
+  font-family: inherit;
+  background: rgba(0, 255, 65, 0.08);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  border-radius: 6px;
+  color: #00ff41;
+  padding: clamp(6px, 1vw, 10px) clamp(10px, 1.4vw, 16px);
+  font-size: clamp(11px, 1.4vw, 18px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.quick-cmd-btn:hover {
+  background: rgba(0, 255, 65, 0.2);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
+}
+
+/* ============================================================
+   Per-tier visual themes (layout + color), matching the accent
+   colors used on the tier-select screen: k5 cyan, middle amber,
+   high red. Each tier gets a genuinely different shape, not just
+   a recolor - k5's command bar becomes a big-button icon grid,
+   high tier gets a tighter, denser, more "authentic CLI" feel.
+   ============================================================ */
+
+/* --- K-5: simplified, bigger, icon-driven, less terminal-like --- */
+.terminal-container.tier-k5 {
+  background:
+    radial-gradient(ellipse at center, rgba(55, 227, 255, 0.07) 0%, rgba(5, 12, 22, 0.92) 70%),
+    linear-gradient(180deg, rgba(10, 20, 32, 0.97) 0%, rgba(6, 14, 24, 0.99) 100%);
+}
+
+.terminal-container.tier-k5 .terminal-header {
+  background: linear-gradient(135deg, rgba(55, 227, 255, 0.18) 0%, rgba(8, 16, 28, 0.92) 100%);
+  border-bottom: 2px solid rgba(55, 227, 255, 0.5);
+  min-height: clamp(56px, 7vh, 100px);
+}
+
+.terminal-container.tier-k5 .terminal-title,
+.terminal-container.tier-k5 .terminal-output,
+.terminal-container.tier-k5 .terminal-input {
+  color: #e3fbff;
+  text-shadow: 0 0 8px rgba(55, 227, 255, 0.5);
+}
+
+.terminal-container.tier-k5 .connection-status {
+  color: #37e3ff;
+  background: rgba(55, 227, 255, 0.12);
+  border-color: rgba(55, 227, 255, 0.4);
+}
+
+.terminal-container.tier-k5 .terminal-stats span {
+  background: rgba(55, 227, 255, 0.08);
+  border-color: rgba(55, 227, 255, 0.25);
+  color: #37e3ff;
+}
+
+.terminal-container.tier-k5 .terminal-output {
+  font-size: clamp(14px, 2vw, 30px);
+  line-height: 1.6;
+  background: rgba(10, 22, 38, 0.5);
+  border: 1px solid rgba(55, 227, 255, 0.3);
+  border-radius: 16px;
+}
+
+.terminal-container.tier-k5 .terminal-output::before {
+  display: none; /* no harsh scanlines - friendlier, calmer feel */
+}
+
+.terminal-container.tier-k5 .terminal-input-line {
+  background: rgba(55, 227, 255, 0.08);
+  border: 2px solid rgba(55, 227, 255, 0.4);
+  border-radius: 16px;
+}
+
+.terminal-container.tier-k5 .terminal-input-line:focus-within {
+  border-color: rgba(55, 227, 255, 0.7);
+  box-shadow: 0 0 20px rgba(55, 227, 255, 0.35);
+  background: rgba(55, 227, 255, 0.1);
+}
+
+.terminal-container.tier-k5 .terminal-prompt .user { color: #37e3ff; }
+.terminal-container.tier-k5 .terminal-prompt .host { color: #9ef0ff; }
+.terminal-container.tier-k5 .terminal-prompt .path { color: #e3fbff; }
+
+/* Big-button icon grid replaces the plain command bar for K-5 */
+.terminal-container.tier-k5 .quick-command-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: clamp(8px, 1.4vw, 16px);
+  padding: clamp(10px, 1.6vw, 18px);
+  background: rgba(55, 227, 255, 0.05);
+  border: 1px solid rgba(55, 227, 255, 0.25);
+  border-radius: 18px;
+  margin-bottom: clamp(6px, 1vw, 12px);
+}
+
+.terminal-container.tier-k5 .quick-cmd-btn {
+  background: rgba(55, 227, 255, 0.12);
+  border: 2px solid rgba(55, 227, 255, 0.45);
+  border-radius: 14px;
+  color: #eafdff;
+  font-weight: 700;
+  font-size: clamp(13px, 1.8vw, 18px);
+  padding: clamp(16px, 2.2vw, 22px) clamp(8px, 1vw, 12px);
+  text-align: center;
+  box-shadow: 0 3px 0 rgba(55, 227, 255, 0.3);
+}
+
+.terminal-container.tier-k5 .quick-cmd-btn:hover {
+  background: rgba(55, 227, 255, 0.25);
+  box-shadow: 0 0 18px rgba(55, 227, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.terminal-container.tier-k5 .quick-target-chip {
+  border-radius: 12px;
+  border-color: rgba(55, 227, 255, 0.4);
+  background: rgba(55, 227, 255, 0.08);
+  color: #e3fbff;
+  font-size: clamp(13px, 1.6vw, 17px);
+  padding: clamp(10px, 1.4vw, 14px);
+}
+
+/* --- Middle (6-8): amber accent, same terminal shape, moderate density --- */
+.terminal-container.tier-middle .terminal-header {
+  background: linear-gradient(135deg, rgba(255, 210, 63, 0.12) 0%, rgba(0, 0, 0, 0.9) 100%);
+  border-bottom: 1px solid rgba(255, 210, 63, 0.35);
+}
+
+.terminal-container.tier-middle .connection-status {
+  color: #ffd23f;
+  background: rgba(255, 210, 63, 0.1);
+  border-color: rgba(255, 210, 63, 0.35);
+}
+
+.terminal-container.tier-middle .terminal-stats span {
+  background: rgba(255, 210, 63, 0.06);
+  border-color: rgba(255, 210, 63, 0.25);
+  color: #ffd23f;
+}
+
+.terminal-container.tier-middle .terminal-prompt .host { color: #ffd23f; }
+
+.terminal-container.tier-middle .terminal-input-line:focus-within {
+  border-color: rgba(255, 210, 63, 0.55);
+  box-shadow: 0 0 18px rgba(255, 210, 63, 0.25);
+}
+
+.terminal-container.tier-middle .quick-cmd-btn {
+  border-color: rgba(255, 210, 63, 0.35);
+}
+
+.terminal-container.tier-middle .quick-cmd-btn:hover {
+  background: rgba(255, 210, 63, 0.15);
+  box-shadow: 0 0 10px rgba(255, 210, 63, 0.35);
+}
+
+.terminal-container.tier-middle .quick-target-chip {
+  border-color: rgba(255, 210, 63, 0.3);
+}
+
+/* --- High (9-12): dense, authentic CLI, minimal chrome, red accent --- */
+.terminal-container.tier-high .terminal-header {
+  min-height: clamp(36px, 4.5vh, 60px);
+  padding: clamp(3px, 0.8vw, 14px) clamp(6px, 1vw, 18px);
+  border-bottom: 1px solid rgba(255, 63, 95, 0.3);
+  background: linear-gradient(135deg, rgba(255, 63, 95, 0.08) 0%, rgba(0, 0, 0, 0.94) 100%);
+}
+
+.terminal-container.tier-high .terminal-title {
+  font-size: clamp(10px, 1.5vw, 20px);
+}
+
+.terminal-container.tier-high .connection-status {
+  color: #ff3f5f;
+  background: rgba(255, 63, 95, 0.08);
+  border-color: rgba(255, 63, 95, 0.3);
+}
+
+.terminal-container.tier-high .terminal-stats span {
+  background: rgba(255, 63, 95, 0.05);
+  border-color: rgba(255, 63, 95, 0.2);
+  color: #ff7a8c;
+}
+
+.terminal-container.tier-high .terminal-output {
+  font-size: clamp(10px, 1.2vw, 20px);
+  line-height: 1.35;
+  border-radius: 4px;
+  padding: clamp(4px, 0.8vw, 12px);
+}
+
+.terminal-container.tier-high .terminal-prompt .host { color: #ff3f5f; }
+
+.terminal-container.tier-high .terminal-input-line {
+  border-radius: 4px;
+  padding: clamp(2px, 0.4vw, 10px) clamp(4px, 0.8vw, 14px);
+}
+
+.terminal-container.tier-high .terminal-input-line:focus-within {
+  border-color: rgba(255, 63, 95, 0.5);
+  box-shadow: 0 0 14px rgba(255, 63, 95, 0.25);
+}
+
+.quick-target-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  background: rgba(0, 255, 65, 0.06);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  border-radius: 5px;
+  color: inherit;
+  padding: clamp(4px, 0.6vw, 8px) clamp(8px, 1vw, 12px);
+  margin: 2px 0;
+  font-size: clamp(11px, 1.4vw, 18px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-target-chip:hover {
+  background: rgba(0, 255, 65, 0.18);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.35);
 }
 
 /* Command styling with glow effect */
@@ -595,6 +840,101 @@ body {
   background: linear-gradient(45deg, #ff0055, #dd0044);
   box-shadow: 0 0 15px rgba(255, 0, 64, 0.5);
   transform: scale(1.05);
+}
+
+/* ============================================================
+   MINIGAME POPUP TIER THEMING
+   The popup defaults to the green "hacker terminal" look above.
+   K-5 needs to feel like the rest of its friendly cyan UI, not a
+   reskinned grown-up screen - softer corners, no all-caps glow,
+   bigger readable type. Middle/high get a lighter recolor so the
+   whole app stays visually consistent across tiers.
+   ============================================================ */
+
+/* --- K-5: cyan, calm, rounded, no scanline/glow effects --- */
+.minigame-overlay.tier-k5 {
+  background: rgba(6, 14, 24, 0.92);
+}
+
+.minigame-overlay.tier-k5 .minigame-container {
+  background: linear-gradient(180deg, rgba(10, 22, 38, 0.98) 0%, rgba(6, 14, 24, 0.99) 100%);
+  border: 2px solid rgba(55, 227, 255, 0.5);
+  border-radius: 20px;
+  box-shadow: none;
+}
+
+.minigame-overlay.tier-k5 .minigame-header {
+  background: linear-gradient(135deg, rgba(55, 227, 255, 0.18) 0%, rgba(8, 16, 28, 0.92) 100%);
+  border-bottom: 2px solid rgba(55, 227, 255, 0.5);
+}
+
+.minigame-overlay.tier-k5 .minigame-header h3 {
+  color: #e3fbff;
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 700;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+}
+
+.minigame-overlay.tier-k5 .minigame-content {
+  background: rgba(10, 22, 38, 0.6);
+  color: #e3fbff;
+  font-size: clamp(14px, 1.6vw, 18px);
+  line-height: 1.6;
+}
+
+.minigame-overlay.tier-k5 .close-minigame {
+  background: rgba(55, 227, 255, 0.18);
+  border: 2px solid rgba(55, 227, 255, 0.5);
+  color: #e3fbff;
+  border-radius: 12px;
+  font-family: inherit;
+  text-transform: none;
+}
+
+.minigame-overlay.tier-k5 .close-minigame:hover {
+  background: rgba(55, 227, 255, 0.3);
+  box-shadow: 0 0 12px rgba(55, 227, 255, 0.4);
+}
+
+/* --- Middle (6-8): amber recolor, keeps the terminal shape --- */
+.minigame-overlay.tier-middle .minigame-container {
+  border-color: #ffd23f;
+}
+
+.minigame-overlay.tier-middle .minigame-header {
+  border-bottom-color: #ffd23f;
+}
+
+.minigame-overlay.tier-middle .minigame-header h3 {
+  color: #ffd23f;
+}
+
+.minigame-overlay.tier-middle .minigame-header h3::after {
+  background: linear-gradient(90deg, transparent, #ffd23f, transparent);
+}
+
+.minigame-overlay.tier-middle .close-minigame {
+  background: linear-gradient(45deg, #ffb200, #cc8e00);
+  border-color: #ffd23f;
+}
+
+/* --- High (9-12): red recolor, keeps the dense CLI feel --- */
+.minigame-overlay.tier-high .minigame-container {
+  border-color: #ff3f5f;
+}
+
+.minigame-overlay.tier-high .minigame-header {
+  border-bottom-color: #ff3f5f;
+}
+
+.minigame-overlay.tier-high .minigame-header h3 {
+  color: #ff3f5f;
+}
+
+.minigame-overlay.tier-high .minigame-header h3::after {
+  background: linear-gradient(90deg, transparent, #ff3f5f, transparent);
 }
 
 /* ======================== */
@@ -897,6 +1237,441 @@ body {
   color: #00cc33;
   margin: 5px 0;
   opacity: 0.8;
+}
+
+/* Age-Tier Select Screen */
+.tier-select-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  overflow: auto;
+  z-index: 9999;
+  padding: clamp(12px, 3vw, 40px);
+}
+
+.tier-select-content {
+  text-align: center;
+  z-index: 10;
+  position: relative;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.tier-select-header {
+  margin-bottom: clamp(18px, 3vw, 32px);
+}
+
+.tier-select-title {
+  font-size: clamp(1.4rem, 3.6vw, 2.3rem);
+  font-weight: bold;
+  color: #00ff41;
+  text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41, 0 0 30px #00ff41;
+  margin: 0 0 8px 0;
+  letter-spacing: 2px;
+}
+
+.tier-select-subtitle {
+  font-size: clamp(0.85rem, 2vw, 1.1rem);
+  color: #00cc33;
+  opacity: 0.9;
+}
+
+.tier-select-lab-note {
+  margin-top: 8px;
+  font-size: clamp(0.72rem, 1.4vw, 0.85rem);
+  color: rgba(0, 255, 65, 0.65);
+  opacity: 0.9;
+}
+
+.tier-select-aegis-tagline {
+  margin-top: 10px;
+  font-size: clamp(0.78rem, 1.5vw, 0.92rem);
+  font-style: italic;
+  color: rgba(55, 227, 255, 0.85);
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.45;
+}
+
+.tier-card-thinking {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid var(--tier-color);
+}
+
+.tier-card-thinking-q {
+  font-size: 0.72rem;
+  font-weight: bold;
+  color: var(--tier-color);
+}
+
+.tier-card-thinking-skill {
+  font-size: 0.68rem;
+  opacity: 0.75;
+}
+
+.tier-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(10px, 1.6vw, 24px);
+}
+
+@media (max-width: 760px) {
+  .tier-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tier-card {
+  --tier-color: #00ff41;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid var(--tier-color);
+  border-radius: 12px;
+  padding: clamp(14px, 2vw, 22px);
+  text-align: left;
+  color: #e8fff0;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tier-card:hover,
+.tier-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 0 22px var(--tier-color);
+  outline: none;
+}
+
+.tier-card-badge {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #0a0a0a;
+  background: var(--tier-color);
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+
+.tier-card-name {
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+  font-weight: bold;
+  color: var(--tier-color);
+}
+
+.tier-card-role {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  margin-top: -6px;
+}
+
+.tier-card-preview {
+  margin: 2px 0 0;
+  font-size: clamp(0.76rem, 1.4vw, 0.86rem);
+  font-weight: bold;
+  color: var(--tier-color);
+  line-height: 1.35;
+}
+
+.tier-card-blurb {
+  font-size: clamp(0.78rem, 1.5vw, 0.9rem);
+  line-height: 1.4;
+  opacity: 0.95;
+  margin: 4px 0;
+}
+
+.tier-card-tags {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tier-card-tags li {
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+
+.tier-card-tags li::before {
+  content: '▸ ';
+  color: var(--tier-color);
+}
+
+.tier-card-cta {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 0.82rem;
+  font-weight: bold;
+  color: var(--tier-color);
+}
+
+.tier-select-footer {
+  margin-top: clamp(16px, 3vw, 28px);
+  font-size: clamp(0.68rem, 1.4vw, 0.85rem);
+  color: #00cc33;
+  opacity: 0.8;
+}
+
+.tier-select-footer code {
+  background: rgba(0, 255, 65, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #00ff41;
+}
+
+/* --- BLACK SIGNAL hidden level card -------------------------------------- */
+.tier-black-signal-section {
+  margin-top: clamp(20px, 3vw, 32px);
+}
+
+.tier-card-black-signal {
+  position: relative;
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  font-family: inherit;
+  cursor: default;
+}
+
+.tier-card-black-signal-unlocked {
+  cursor: pointer;
+  background: linear-gradient(145deg, #0a0014 0%, #12001f 40%, #050508 100%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow:
+    0 0 40px rgba(139, 92, 246, 0.25),
+    0 0 80px rgba(88, 28, 135, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.25s ease;
+}
+
+.tier-card-black-signal-unlocked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    #a855f7,
+    #581c87,
+    #1e1b4b,
+    #c084fc,
+    #7c3aed
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: tier-bs-border-spin 6s linear infinite;
+}
+
+@keyframes tier-bs-border-spin {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.tier-card-black-signal-unlocked:hover,
+.tier-card-black-signal-unlocked:focus-visible {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow:
+    0 0 60px rgba(168, 85, 247, 0.45),
+    0 0 100px rgba(139, 92, 246, 0.25);
+  outline: none;
+}
+
+.tier-card-black-signal-locked {
+  background: linear-gradient(145deg, rgba(8, 4, 14, 0.95), rgba(3, 3, 6, 0.98));
+  border: 1px dashed rgba(139, 92, 246, 0.35);
+  opacity: 0.85;
+}
+
+.tier-bs-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(196, 132, 252, 0.12) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: tier-bs-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.tier-bs-shimmer-dim {
+  opacity: 0.35;
+  animation-duration: 8s;
+}
+
+@keyframes tier-bs-shimmer {
+  0%, 100% { background-position: 200% 0; }
+  50% { background-position: -200% 0; }
+}
+
+.tier-bs-glow {
+  position: absolute;
+  top: -50%;
+  left: 50%;
+  width: 120%;
+  height: 100%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+  animation: tier-bs-glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes tier-bs-glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.tier-bs-inner {
+  position: relative;
+  padding: clamp(18px, 2.5vw, 28px) clamp(20px, 3vw, 32px);
+  z-index: 1;
+}
+
+.tier-bs-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.tier-bs-sigil {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  filter: drop-shadow(0 0 12px #a855f7);
+  animation: tier-bs-sigil-pulse 2.5s ease-in-out infinite;
+}
+
+.tier-bs-sigil-locked {
+  filter: none;
+  opacity: 0.4;
+  animation: none;
+}
+
+@keyframes tier-bs-sigil-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.tier-bs-hidden-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #0a0a0a;
+  background: linear-gradient(90deg, #c084fc, #a855f7);
+  padding: 3px 12px;
+  border-radius: 4px;
+}
+
+.tier-card-black-signal-locked .tier-bs-hidden-badge {
+  background: rgba(100, 100, 120, 0.4);
+  color: rgba(200, 200, 220, 0.6);
+}
+
+.tier-bs-name {
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #f3e8ff;
+  text-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+  margin-bottom: 0.25rem;
+}
+
+.tier-bs-name-locked {
+  color: rgba(180, 170, 200, 0.5);
+  text-shadow: none;
+}
+
+.tier-bs-tagline {
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+  font-style: italic;
+  color: #c4b5fd;
+  margin-bottom: 0.75rem;
+}
+
+.tier-bs-blurb {
+  font-size: clamp(0.78rem, 1.4vw, 0.9rem);
+  line-height: 1.5;
+  color: rgba(232, 228, 255, 0.88);
+  margin: 0 0 0.85rem;
+  max-width: 52rem;
+}
+
+.tier-bs-blurb-locked {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.tier-bs-lock-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #a78bfa;
+  margin-bottom: 0.5rem;
+}
+
+.tier-bs-lock-icon {
+  font-size: 1.1rem;
+}
+
+.tier-bs-tags {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  font-size: 0.72rem;
+  color: rgba(196, 181, 253, 0.9);
+}
+
+.tier-bs-tags li::before {
+  content: '◆ ';
+  color: #a855f7;
+}
+
+.tier-bs-cta {
+  display: inline-block;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #e9d5ff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.6), rgba(88, 28, 135, 0.8));
+  border: 1px solid rgba(196, 132, 252, 0.5);
+  transition: box-shadow 0.2s;
+}
+
+.tier-card-black-signal-unlocked:hover .tier-bs-cta {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
 }
 
 .loading-background-effects {
@@ -1935,7 +2710,7 @@ body {
 .message-enhanced {
   display: flex;
   gap: clamp(6px, 1.2vw, 15px);
-}  animation: fadeInMessage 0.5s ease-in;
+  animation: fadeInMessage 0.5s ease-in;
 }
 
 .message-enhanced.outgoing {
@@ -3485,7 +4260,6 @@ body {
   color: #bb86fc;
   font-size: clamp(0.8rem, 1.4vw, 1.1rem);
   word-break: break-all;
-}
 }
 
 .message-display.success code {
@@ -6140,4 +6914,1421 @@ body {
   animation-iteration-count: 1 !important;
   transition: none !important;
   transition-duration: 0.001ms !important;
+}
+
+/* ============================================================
+   K-5 MINIGAME INTERIOR RECOLOR
+   The shared "-enhanced" component classes (used by the network
+   scanner, password cracker, phishing/crypto/decrypt/forensics
+   tools) default to a neon-green hacker palette. For K-5 these
+   are recolored to the same cyan used by the rest of the K-5 UI,
+   with hot-pink/purple "attack" accents swapped for friendlier
+   colors and the all-caps/letter-spacing styling relaxed.
+   Scoped with the .tier-k5 root class each K-5-aware minigame
+   component already adds to itself, so specificity beats the
+   un-tiered defaults above regardless of source order.
+   ============================================================ */
+.minigame-overlay.tier-k5 .mission-info h2,
+.minigame-overlay.tier-k5 .step-header h3,
+.minigame-overlay.tier-k5 .target-info h4,
+.minigame-overlay.tier-k5 .conversation-title h3,
+.minigame-overlay.tier-k5 .analysis-section h4,
+.minigame-overlay.tier-k5 .intelligence-section h4,
+.minigame-overlay.tier-k5 .analysis-value,
+.minigame-overlay.tier-k5 .intel-data strong,
+.minigame-overlay.tier-k5 .percentage {
+  color: #37e3ff;
+  text-shadow: none;
+}
+
+.minigame-overlay.tier-k5 .mission-scenario,
+.minigame-overlay.tier-k5 .step-header p,
+.minigame-overlay.tier-k5 .stat-label,
+.minigame-overlay.tier-k5 .analysis-label,
+.minigame-overlay.tier-k5 .intel-data p,
+.minigame-overlay.tier-k5 .approach-description {
+  color: #9ef0ff;
+}
+
+.minigame-overlay.tier-k5 .step.active .step-number {
+  background: rgba(55, 227, 255, 0.3);
+  border-color: #37e3ff;
+  color: #37e3ff;
+  text-shadow: none;
+}
+
+.minigame-overlay.tier-k5 .step.completed .step-number {
+  background: rgba(55, 227, 255, 0.2);
+  border-color: #2fb6cc;
+  color: #2fb6cc;
+}
+
+.minigame-overlay.tier-k5 .step.active .step-label {
+  color: #37e3ff;
+}
+
+.minigame-overlay.tier-k5 .step.completed .step-label {
+  color: #2fb6cc;
+}
+
+.minigame-overlay.tier-k5 .target-card-enhanced,
+.minigame-overlay.tier-k5 .method-card-enhanced,
+.minigame-overlay.tier-k5 .approach-card-enhanced {
+  background: rgba(55, 227, 255, 0.06);
+  border-color: rgba(55, 227, 255, 0.3);
+  border-radius: 16px;
+}
+
+.minigame-overlay.tier-k5 .target-card-enhanced:hover,
+.minigame-overlay.tier-k5 .method-card-enhanced:hover,
+.minigame-overlay.tier-k5 .approach-card-enhanced:hover {
+  background: rgba(55, 227, 255, 0.12);
+  border-color: rgba(55, 227, 255, 0.5);
+}
+
+.minigame-overlay.tier-k5 .target-card-enhanced.selected,
+.minigame-overlay.tier-k5 .method-card-enhanced.selected,
+.minigame-overlay.tier-k5 .approach-card-enhanced.selected {
+  background: rgba(55, 227, 255, 0.18);
+  border-color: #37e3ff;
+  box-shadow: none;
+}
+
+.minigame-overlay.tier-k5 .selection-indicator {
+  background: rgba(55, 227, 255, 0.9);
+  color: #04212c;
+}
+
+.minigame-overlay.tier-k5 .continue-btn-enhanced,
+.minigame-overlay.tier-k5 .complete-btn {
+  background: rgba(55, 227, 255, 0.18);
+  border: 2px solid #37e3ff;
+  color: #e3fbff;
+  text-transform: none;
+  letter-spacing: normal;
+  border-radius: 16px;
+}
+
+.minigame-overlay.tier-k5 .continue-btn-enhanced:hover,
+.minigame-overlay.tier-k5 .complete-btn:hover {
+  background: rgba(55, 227, 255, 0.3);
+  box-shadow: 0 0 12px rgba(55, 227, 255, 0.4);
+}
+
+.minigame-overlay.tier-k5 .execute-btn-enhanced,
+.minigame-overlay.tier-k5 .new-scan-btn,
+.minigame-overlay.tier-k5 .new-attack-btn {
+  background: rgba(55, 227, 255, 0.18);
+  border: 2px solid #37e3ff;
+  color: #e3fbff;
+  text-transform: none;
+  letter-spacing: normal;
+  border-radius: 16px;
+}
+
+.minigame-overlay.tier-k5 .execute-btn-enhanced:hover,
+.minigame-overlay.tier-k5 .new-scan-btn:hover,
+.minigame-overlay.tier-k5 .new-attack-btn:hover {
+  background: rgba(55, 227, 255, 0.3);
+  box-shadow: 0 0 12px rgba(55, 227, 255, 0.4);
+}
+
+.minigame-overlay.tier-k5 .change-target-btn {
+  background: rgba(55, 227, 255, 0.15);
+  border-color: rgba(55, 227, 255, 0.4);
+  color: #9ef0ff;
+}
+
+.minigame-overlay.tier-k5 .progress-bar,
+.minigame-overlay.tier-k5 .progress-bar-large {
+  border-color: rgba(55, 227, 255, 0.3);
+}
+
+.minigame-overlay.tier-k5 .progress-fill,
+.minigame-overlay.tier-k5 .progress-fill-large {
+  background: linear-gradient(90deg, #37e3ff 0%, #9ef0ff 100%);
+}
+
+.minigame-overlay.tier-k5 .result-status-large.success {
+  color: #37e3ff;
+  text-shadow: none;
+}
+
+.minigame-overlay.tier-k5 .result-status-large.failure {
+  color: #ffb347;
+  text-shadow: none;
+}
+
+.minigame-overlay.tier-k5 .result-reason {
+  color: #9ef0ff;
+}
+
+.minigame-overlay.tier-k5 .analysis-section,
+.minigame-overlay.tier-k5 .intelligence-section,
+.minigame-overlay.tier-k5 .intel-card {
+  background: rgba(55, 227, 255, 0.06);
+  border-color: rgba(55, 227, 255, 0.25);
+}
+
+.minigame-overlay.tier-k5 .analysis-item {
+  border-bottom-color: rgba(55, 227, 255, 0.15);
+}
+
+.minigame-overlay.tier-k5 .weakness-tag,
+.minigame-overlay.tier-k5 .weakness-indicator-enhanced,
+.minigame-overlay.tier-k5 .intel-card h5 {
+  background: rgba(255, 179, 71, 0.18);
+  color: #ffb347;
+  border-color: rgba(255, 179, 71, 0.4);
+}
+
+/* ============================================================
+   K-5 "Spot the Trick Email" (PhishingSimulator defensive mode)
+   ============================================================ */
+.k5-instructions {
+  color: #9ef0ff;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+}
+
+.k5-email-card {
+  background: rgba(55, 227, 255, 0.06);
+  border: 2px solid rgba(55, 227, 255, 0.3);
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+
+.k5-email-row {
+  margin-bottom: 6px;
+  color: #e3fbff;
+}
+
+.k5-email-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(55, 227, 255, 0.25);
+  color: #e3fbff;
+  line-height: 1.6;
+}
+
+.k5-answer-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.k5-safe-btn,
+.k5-trick-btn,
+.k5-next-btn {
+  flex: 1;
+  min-width: 140px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 2px solid #37e3ff;
+  background: rgba(55, 227, 255, 0.18);
+  color: #e3fbff;
+  font-size: 1.05em;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.k5-safe-btn:hover,
+.k5-trick-btn:hover,
+.k5-next-btn:hover {
+  background: rgba(55, 227, 255, 0.3);
+}
+
+.k5-feedback {
+  margin-top: 10px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(55, 227, 255, 0.1);
+  border: 2px solid rgba(55, 227, 255, 0.4);
+}
+
+.k5-feedback-title {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #37e3ff;
+  margin-bottom: 8px;
+}
+
+.k5-feedback-why {
+  color: #e3fbff;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.k5-progress {
+  margin-top: 12px;
+  color: #9ef0ff;
+  text-align: center;
+}
+
+.k5-complete {
+  text-align: center;
+  padding: 24px;
+}
+
+.k5-complete-title {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #37e3ff;
+  margin-bottom: 10px;
+}
+
+.k5-complete-score {
+  font-size: 1.1em;
+  color: #e3fbff;
+  margin-bottom: 10px;
+}
+
+.k5-complete-rank {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #37e3ff;
+  margin-bottom: 10px;
+  text-shadow: 0 0 12px rgba(55, 227, 255, 0.5);
+}
+
+.k5-complete-tip {
+  color: #9ef0ff;
+  line-height: 1.6;
+}
+
+.k5-tip {
+  background: rgba(55, 227, 255, 0.1);
+  border: 1px solid rgba(55, 227, 255, 0.35);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 10px 0 16px;
+  color: #e3fbff;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.k5-learned {
+  background: rgba(55, 227, 255, 0.08);
+  border-left: 3px solid #37e3ff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  color: #9ef0ff;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.k5-crypto-title {
+  color: #e3fbff;
+}
+
+.k5-file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.k5-file-card {
+  cursor: pointer;
+}
+
+.k5-file-card:hover {
+  background: rgba(55, 227, 255, 0.12);
+  border-color: rgba(55, 227, 255, 0.5);
+}
+
+.k5-locked-card,
+.k5-case-card {
+  position: relative;
+}
+
+.k5-lock-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 1.1em;
+  opacity: 0.85;
+}
+
+/* "This is practice" reassurance banner */
+.k5-practice-banner {
+  background: rgba(255, 209, 102, 0.12);
+  border: 1px dashed rgba(255, 209, 102, 0.45);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  color: #ffe9b3;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+/* Detective Byte mascot */
+.k5-byte-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.k5-byte-avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4em;
+  background: rgba(55, 227, 255, 0.15);
+  border: 2px solid rgba(55, 227, 255, 0.5);
+  border-radius: 50%;
+}
+
+.k5-byte-bubble {
+  flex: 1 1 auto;
+  background: rgba(55, 227, 255, 0.08);
+  border: 1px solid rgba(55, 227, 255, 0.3);
+  border-radius: 14px;
+  padding: 10px 14px;
+  color: #e3fbff;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+/* Realistic-looking inbox email card */
+.k5-inbox-bar {
+  color: #9ef0ff;
+  font-weight: 600;
+  font-size: 0.85em;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+
+.k5-email-realistic {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.k5-email-avatar {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #37e3ff, #1a8fb0);
+  color: #04222b;
+  font-weight: 700;
+  font-size: 1.1em;
+}
+
+.k5-email-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.k5-email-toprow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.k5-email-name {
+  font-weight: 700;
+  color: #e3fbff;
+}
+
+.k5-email-time {
+  font-size: 0.8em;
+  color: #9ef0ff;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.k5-email-address {
+  font-size: 0.8em;
+  color: #9ef0ff;
+  opacity: 0.75;
+  margin-bottom: 6px;
+}
+
+.k5-email-subject {
+  font-weight: 700;
+  color: #e3fbff;
+  margin-bottom: 4px;
+}
+
+/* ============================================================
+   K-5 "Cyber HQ" status panel — lightweight SIEM-style sidebar
+   ============================================================ */
+.cyber-hq-panel {
+  flex: 0 0 240px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(10, 22, 38, 0.6);
+  border-left: 2px solid rgba(55, 227, 255, 0.3);
+  overflow-y: auto;
+  font-size: 0.85em;
+}
+
+.hq-panel-title {
+  font-weight: 700;
+  color: #37e3ff;
+  font-size: 1.05em;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(55, 227, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hq-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7em;
+  font-weight: 700;
+  color: #ff6b6b;
+  background: rgba(255, 68, 68, 0.12);
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  border-radius: 8px;
+  padding: 2px 7px;
+  letter-spacing: 0.05em;
+}
+
+.hq-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4444;
+  animation: hqLivePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes hqLivePulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 4px rgba(255, 68, 68, 0.8); }
+  50% { opacity: 0.4; transform: scale(0.7); box-shadow: 0 0 0 rgba(255, 68, 68, 0); }
+}
+
+.hq-alert-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.hq-alert-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hq-alert-row.hq-safe {
+  background: rgba(68, 255, 68, 0.1);
+  color: #7dffa0;
+}
+.hq-alert-row.hq-safe .hq-alert-dot {
+  background: #44ff44;
+  box-shadow: 0 0 8px rgba(68, 255, 68, 0.8);
+}
+
+.hq-alert-row.hq-watch {
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffe9b3;
+}
+.hq-alert-row.hq-watch .hq-alert-dot {
+  background: #ffd166;
+  box-shadow: 0 0 8px rgba(255, 209, 102, 0.8);
+}
+
+.hq-alert-row.hq-alert {
+  background: rgba(255, 68, 68, 0.12);
+  color: #ffb3b3;
+}
+.hq-alert-row.hq-alert .hq-alert-dot {
+  background: #ff4444;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.8);
+}
+
+.hq-section {
+  display: block;
+  width: 100%;
+}
+
+.hq-section.hq-clickable {
+  background: rgba(55, 227, 255, 0.05);
+  border: 1px solid rgba(55, 227, 255, 0.18);
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.hq-section.hq-clickable:hover {
+  background: rgba(55, 227, 255, 0.12);
+  border-color: rgba(55, 227, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.hq-section.hq-clickable:active {
+  transform: translateY(0);
+}
+
+.hq-section-title {
+  color: #9ef0ff;
+  font-weight: 700;
+  font-size: 0.9em;
+  margin-bottom: 4px;
+}
+
+.hq-section-body {
+  color: #e3fbff;
+  line-height: 1.4;
+}
+
+.hq-section-hint {
+  color: #37e3ff;
+  opacity: 0.75;
+  font-size: 0.78em;
+  margin-top: 4px;
+}
+
+.hq-xp-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 5px;
+  background: rgba(55, 227, 255, 0.12);
+  overflow: hidden;
+  margin: 4px 0 6px;
+}
+
+.hq-xp-fill {
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #37e3ff, #44ff9e);
+  box-shadow: 0 0 8px rgba(55, 227, 255, 0.6);
+  transition: width 0.6s ease;
+}
+
+.hq-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.hq-scan-btn {
+  font-family: inherit;
+  font-size: 0.72em;
+  font-weight: 700;
+  color: #37e3ff;
+  background: rgba(55, 227, 255, 0.1);
+  border: 1px solid rgba(55, 227, 255, 0.4);
+  border-radius: 8px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hq-scan-btn:hover:not(:disabled) {
+  background: rgba(55, 227, 255, 0.2);
+}
+
+.hq-scan-btn.scanning {
+  opacity: 0.8;
+  animation: hqScanPulse 0.7s ease-in-out infinite;
+}
+
+@keyframes hqScanPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.hq-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hq-feed-empty {
+  color: #9ef0ff;
+  opacity: 0.7;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.hq-feed-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(55, 227, 255, 0.05);
+  font-size: 0.82em;
+  line-height: 1.35;
+  animation: hqFeedIn 0.35s ease;
+}
+
+@keyframes hqFeedIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hq-feed-item.hq-feed-ambient {
+  background: rgba(55, 227, 255, 0.03);
+  border: 1px dashed rgba(55, 227, 255, 0.15);
+  opacity: 0.85;
+}
+
+.hq-feed-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #37e3ff;
+  flex-shrink: 0;
+  transform: translateY(-1px);
+}
+
+.hq-feed-time {
+  color: #9ef0ff;
+  opacity: 0.7;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+
+.hq-feed-text {
+  color: #e3fbff;
+  word-break: break-word;
+}
+
+.hq-feed-item.hq-feed-success .hq-feed-dot,
+.hq-feed-item.hq-feed-success .hq-feed-text {
+  color: #7dffa0;
+}
+.hq-feed-item.hq-feed-success .hq-feed-dot { background: #44ff44; }
+
+.hq-feed-item.hq-feed-warning .hq-feed-dot,
+.hq-feed-item.hq-feed-warning .hq-feed-text {
+  color: #ffe9b3;
+}
+.hq-feed-item.hq-feed-warning .hq-feed-dot { background: #ffd166; }
+
+.hq-feed-item.hq-feed-error .hq-feed-dot,
+.hq-feed-item.hq-feed-error .hq-feed-text,
+.hq-feed-item.hq-feed-critical .hq-feed-dot,
+.hq-feed-item.hq-feed-critical .hq-feed-text,
+.hq-feed-item.hq-feed-lockdown .hq-feed-dot,
+.hq-feed-item.hq-feed-lockdown .hq-feed-text {
+  color: #ffb3b3;
+}
+.hq-feed-item.hq-feed-error .hq-feed-dot,
+.hq-feed-item.hq-feed-critical .hq-feed-dot,
+.hq-feed-item.hq-feed-lockdown .hq-feed-dot {
+  background: #ff4444;
+}
+
+/* Hide the sidebar on narrow screens so the main terminal keeps full width
+   and we don't reintroduce cramped/scrolling layouts on small devices. */
+@media (max-width: 900px) {
+  .cyber-hq-panel {
+    display: none;
+  }
+}
+
+/* ============================================================
+   K-5 left module nav — SOC-dashboard-style click navigation
+   ============================================================ */
+.k5-nav-sidebar {
+  flex: 0 0 190px;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 10px;
+  background: rgba(10, 22, 38, 0.6);
+  border-right: 2px solid rgba(55, 227, 255, 0.3);
+  overflow-y: auto;
+}
+
+.k5-nav-phase-header {
+  font-weight: 700;
+  color: #9be8ff;
+  font-size: 0.72em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 4px 2px;
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+.k5-nav-phase-header.k5-nav-phase-done {
+  color: #6dffb0;
+  opacity: 1;
+  border-left: 3px solid rgba(109, 255, 176, 0.6);
+  padding-left: 6px;
+}
+
+.k5-nav-phase-header.k5-nav-case-closed {
+  color: #ffd76a;
+  font-size: 0.8em;
+  text-align: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 215, 106, 0.4);
+}
+
+.k5-nav-title {
+  font-weight: 700;
+  color: #37e3ff;
+  font-size: 0.95em;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(55, 227, 255, 0.25);
+}
+
+.k5-nav-progress {
+  padding: 8px 4px 6px;
+}
+
+.k5-nav-progress-label {
+  font-size: 0.68em;
+  color: #9be8ff;
+  text-align: center;
+  margin-bottom: 5px;
+  letter-spacing: 0.03em;
+}
+
+.k5-nav-progress-track {
+  display: flex;
+  gap: 4px;
+}
+
+.k5-nav-progress-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(55, 227, 255, 0.15);
+  border: 1px solid rgba(55, 227, 255, 0.25);
+}
+
+.k5-nav-progress-seg.filled {
+  background: #6dffb0;
+  border-color: #6dffb0;
+}
+
+.k5-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.k5-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(55, 227, 255, 0.25);
+  background: rgba(55, 227, 255, 0.05);
+  color: #e3fbff;
+  font-family: inherit;
+  font-size: 0.82em;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.k5-nav-item:hover {
+  background: rgba(55, 227, 255, 0.14);
+  border-color: rgba(55, 227, 255, 0.5);
+  transform: translateX(2px);
+}
+
+.k5-nav-item.active {
+  background: rgba(55, 227, 255, 0.22);
+  border-color: #37e3ff;
+  box-shadow: 0 0 10px rgba(55, 227, 255, 0.4);
+}
+
+.k5-nav-item.locked {
+  opacity: 0.5;
+}
+
+.k5-nav-icon {
+  font-size: 1.15em;
+  flex-shrink: 0;
+}
+
+.k5-nav-label-stack {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.k5-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.k5-nav-unlock-hint {
+  font-size: 0.66em;
+  color: rgba(227, 251, 255, 0.55);
+  white-space: normal;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.k5-nav-done,
+.k5-nav-lock {
+  font-size: 0.85em;
+  flex-shrink: 0;
+}
+
+.k5-nav-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(55, 227, 255, 0.2);
+}
+
+.k5-nav-utility {
+  flex: 1;
+  font-family: inherit;
+  font-size: 0.72em;
+  font-weight: 700;
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(55, 227, 255, 0.3);
+  background: rgba(55, 227, 255, 0.08);
+  color: #9ef0ff;
+  cursor: pointer;
+}
+
+.k5-nav-utility:hover {
+  background: rgba(55, 227, 255, 0.18);
+}
+
+/* Breadcrumb showing which module is open */
+.k5-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  background: rgba(55, 227, 255, 0.08);
+  border: 1px solid rgba(55, 227, 255, 0.25);
+  border-radius: 10px;
+  color: #37e3ff;
+  font-weight: 700;
+  font-size: 0.9em;
+  flex-shrink: 0;
+}
+
+.k5-log-heading {
+  color: #9ef0ff;
+  opacity: 0.65;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 700px) {
+  .k5-nav-sidebar {
+    flex: 0 0 64px;
+    width: 64px;
+    padding: 10px 4px;
+  }
+  .k5-nav-title,
+  .k5-nav-label,
+  .k5-nav-unlock-hint,
+  .k5-nav-phase-header,
+  .k5-nav-progress {
+    display: none;
+  }
+  .k5-nav-item {
+    justify-content: center;
+    padding: 10px 2px;
+  }
+  .k5-nav-footer {
+    flex-direction: column;
+  }
+}
+
+/* ===================== K-5 cinematic boot intro ===================== */
+
+.k5-intro-overlay {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: radial-gradient(ellipse at center, rgba(9, 38, 46, 0.96) 0%, rgba(3, 14, 18, 0.99) 70%);
+  overflow: hidden;
+}
+
+.k5-intro-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(55, 227, 255, 0.05) 0px,
+    rgba(55, 227, 255, 0.05) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  animation: k5IntroScan 6s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes k5IntroScan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 120px; }
+}
+
+.k5-intro-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  width: min(640px, 86%);
+  text-align: center;
+}
+
+.k5-intro-line {
+  font-family: 'Courier New', monospace;
+  color: #9ef0ff;
+  font-size: clamp(1rem, 2.4vw, 1.5rem);
+  line-height: 1.5;
+  text-shadow: 0 0 14px rgba(55, 227, 255, 0.5);
+  animation: k5IntroFade 6s ease-in-out forwards;
+}
+
+.k5-intro-line.k5-intro-title {
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-weight: 700;
+  color: #37e3ff;
+  letter-spacing: 0.5px;
+}
+
+.k5-intro-line.k5-intro-success {
+  color: #6dffb0;
+  text-shadow: 0 0 14px rgba(109, 255, 176, 0.5);
+}
+
+.k5-intro-line.k5-intro-briefing {
+  color: #e3fbff;
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
+  font-style: italic;
+  max-width: 90%;
+  margin: 0 auto;
+}
+
+@keyframes k5IntroFade {
+  0% { opacity: 0; transform: translateY(14px) scale(0.7); }
+  15% { opacity: 1; transform: translateY(0) scale(1.06); }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  85% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(0.96); }
+}
+
+/* Lines that wait for a tap/click grow in and then hold indefinitely —
+   no auto fade-out, since how long they're on screen is up to the player. */
+.k5-intro-line.k5-intro-hold {
+  animation: k5IntroGrowHold 1.1s ease-out forwards;
+}
+
+@keyframes k5IntroGrowHold {
+  0% { opacity: 0; transform: translateY(14px) scale(0.7); }
+  60% { opacity: 1; transform: translateY(0) scale(1.06); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.k5-intro-overlay.k5-intro-tappable {
+  cursor: pointer;
+}
+
+.k5-intro-tap-hint {
+  position: absolute;
+  bottom: -42px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #6dffb0;
+  text-shadow: 0 0 10px rgba(109, 255, 176, 0.6);
+  animation: k5TapHintPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes k5TapHintPulse {
+  0%, 100% { opacity: 0.55; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+.k5-intro-progress {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 7px;
+}
+
+.k5-intro-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(55, 227, 255, 0.25);
+  transition: background 0.3s ease;
+}
+
+.k5-intro-dot.filled {
+  background: #37e3ff;
+  box-shadow: 0 0 8px rgba(55, 227, 255, 0.7);
+}
+
+.k5-intro-skip {
+  position: absolute;
+  z-index: 3;
+  bottom: 18px;
+  right: 18px;
+  background: rgba(55, 227, 255, 0.12);
+  border: 1px solid rgba(55, 227, 255, 0.4);
+  color: #9ef0ff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.k5-intro-skip:hover {
+  background: rgba(55, 227, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+/* ================== K-5 incident-response phase cutscenes ================== */
+
+.k5-cutscene-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 14, 18, 0.86);
+  cursor: pointer;
+  animation: k5CutsceneIn 0.4s ease-out;
+}
+
+@keyframes k5CutsceneIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.k5-cutscene-card {
+  width: min(420px, 84%);
+  text-align: center;
+  padding: 28px 24px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(13, 50, 60, 0.96), rgba(6, 24, 30, 0.98));
+  border: 1px solid rgba(55, 227, 255, 0.35);
+  box-shadow: 0 0 40px rgba(55, 227, 255, 0.18);
+  animation: k5CutsceneCardIn 0.45s ease-out;
+}
+
+@keyframes k5CutsceneCardIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.k5-cutscene-icon {
+  font-size: 2.6rem;
+  margin-bottom: 6px;
+}
+
+.k5-cutscene-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #9ef0ff;
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.k5-cutscene-label {
+  font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+  font-weight: 700;
+  color: #37e3ff;
+  margin-bottom: 10px;
+  text-shadow: 0 0 14px rgba(55, 227, 255, 0.4);
+}
+
+.k5-cutscene-blurb {
+  font-size: 0.92rem;
+  color: #e3fbff;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.k5-cutscene-hint {
+  font-size: 0.72rem;
+  color: rgba(158, 240, 255, 0.6);
+}
+
+.k5-cutscene-card.k5-cutscene-debrief {
+  width: min(460px, 90%);
+  border-color: rgba(255, 215, 106, 0.45);
+  box-shadow: 0 0 50px rgba(255, 215, 106, 0.2);
+}
+
+.k5-debrief-recap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(55, 227, 255, 0.2);
+}
+
+.k5-debrief-row {
+  font-size: 0.82rem;
+  color: #c9fff0;
+  text-align: left;
+}
+
+.k5-debrief-badge {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffd76a;
+  text-align: center;
+}
+
+.k5-debrief-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.k5-debrief-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 215, 106, 0.5);
+  background: rgba(255, 215, 106, 0.15);
+  color: #ffe8a8;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.k5-debrief-btn:hover {
+  background: rgba(255, 215, 106, 0.28);
+}
+
+.k5-debrief-btn-secondary {
+  border-color: rgba(55, 227, 255, 0.35);
+  background: rgba(55, 227, 255, 0.08);
+  color: #c9fff0;
+}
+
+.k5-debrief-btn-secondary:hover {
+  background: rgba(55, 227, 255, 0.18);
+}
+
+/* ============================================================
+   K-5 SCROLL REDUCTION
+   Kids on the K-5 tier often don't know to scroll, so they miss
+   options sitting below the fold. Two problems were making this
+   worse:
+   1) Each minigame's own "-enhanced" wrapper (phishing, crypto,
+      forensics, etc.) had its own max-height + overflow-y:auto,
+      nested *inside* .minigame-content which already scrolls —
+      two independent scrollbars stacked on top of each other.
+      For k5 we flatten that to a single outer scroll area.
+   2) On narrow screens, option grids (targets/methods/approaches)
+      were forced to a single column, which roughly doubles or
+      triples how far a kid has to scroll to see every choice.
+      For k5 we keep 2 columns as long as there's room, so more
+      options are visible on screen at once.
+   A persistent "scroll for more" cue is also pinned to the
+   bottom of the popup so the affordance is obvious even when
+   some scrolling is still unavoidable.
+   ============================================================ */
+
+.minigame-overlay.tier-k5 .social-engineering-enhanced,
+.minigame-overlay.tier-k5 .password-cracker-enhanced,
+.minigame-overlay.tier-k5 .crypto-challenge-enhanced,
+.minigame-overlay.tier-k5 .phishing-enhanced,
+.minigame-overlay.tier-k5 .digital-forensics-enhanced,
+.minigame-overlay.tier-k5 .malware-analyzer-enhanced {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.minigame-overlay.tier-k5 .minigame-container {
+  max-width: min(1300px, 98vw);
+  max-height: 97vh;
+  width: 98vw;
+  height: 97vh;
+}
+
+/* Reclaim vertical space from the chrome around the content so more of
+   the popup is usable for the actual options, at every screen size —
+   not just narrow ones. */
+.minigame-overlay.tier-k5 .minigame-header {
+  padding: 6px 14px !important;
+  flex-shrink: 0;
+}
+
+.minigame-overlay.tier-k5 .minigame-header h3 {
+  font-size: clamp(0.9rem, 1.6vw, 1.15rem) !important;
+}
+
+.minigame-overlay.tier-k5 .minigame-content {
+  padding: 8px 12px !important;
+}
+
+/* Always run option grids at a compact column width for k5 — more
+   columns means a shorter grid, which means less to scroll through,
+   regardless of how wide the popup happens to be. */
+.minigame-overlay.tier-k5 .targets-enhanced-grid,
+.minigame-overlay.tier-k5 .approaches-enhanced-grid,
+.minigame-overlay.tier-k5 .methods-enhanced-grid,
+.minigame-overlay.tier-k5 .ciphers-enhanced-grid,
+.minigame-overlay.tier-k5 .artifact-grid,
+.minigame-overlay.tier-k5 .analysis-grid,
+.minigame-overlay.tier-k5 .network-scanner-enhanced .devices-grid,
+.minigame-overlay.tier-k5 .network-scanner-enhanced .targets-enhanced-grid,
+.minigame-overlay.tier-k5 .network-scanner-enhanced .methods-enhanced-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  gap: 8px !important;
+}
+
+/* Shrink each card itself so more of them fit in the visible area
+   without needing extra rows. */
+.minigame-overlay.tier-k5 [class*="-card-enhanced"] {
+  padding: 8px 10px !important;
+  font-size: 0.85rem !important;
+}
+
+.minigame-overlay.tier-k5 .target-avatar,
+.minigame-overlay.tier-k5 .mission-icon {
+  font-size: 1.7rem !important;
+  margin-bottom: 4px !important;
+}
+
+.minigame-overlay.tier-k5 .target-description,
+.minigame-overlay.tier-k5 .approach-description,
+.minigame-overlay.tier-k5 .method-description {
+  font-size: 0.78rem !important;
+  line-height: 1.3 !important;
+  margin-bottom: 6px !important;
+}
+
+.minigame-overlay.tier-k5 .step-header,
+.minigame-overlay.tier-k5 .mission-info,
+.minigame-overlay.tier-k5 .scanner-header-enhanced,
+.minigame-overlay.tier-k5 .crypto-header-enhanced {
+  padding: 8px 12px !important;
+  margin-bottom: 8px !important;
+}
+
+.minigame-overlay.tier-k5 .hints-section {
+  max-height: 110px !important;
+}
+
+@media (max-width: 480px) {
+  /* Truly tiny screens still drop to one column — two columns of
+     anything narrower than ~200px stops being tappable. */
+  .minigame-overlay.tier-k5 .targets-enhanced-grid,
+  .minigame-overlay.tier-k5 .approaches-enhanced-grid,
+  .minigame-overlay.tier-k5 .methods-enhanced-grid,
+  .minigame-overlay.tier-k5 .ciphers-enhanced-grid,
+  .minigame-overlay.tier-k5 .artifact-grid,
+  .minigame-overlay.tier-k5 .analysis-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+.minigame-overlay.tier-k5 .minigame-content {
+  position: relative;
+  scrollbar-width: auto;
+}
+
+.minigame-overlay.tier-k5 .minigame-content::-webkit-scrollbar {
+  width: 14px;
+}
+
+.minigame-overlay.tier-k5 .minigame-content::-webkit-scrollbar-track {
+  background: rgba(10, 22, 38, 0.6);
+  border-radius: 8px;
+}
+
+.minigame-overlay.tier-k5 .minigame-content::-webkit-scrollbar-thumb {
+  background: #37e3ff;
+  border-radius: 8px;
+  border: 2px solid rgba(10, 22, 38, 0.6);
+}
+
+.minigame-overlay.tier-k5 .k5-scroll-hint {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 0;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: #37e3ff;
+  background: linear-gradient(180deg, rgba(10, 22, 38, 0) 0%, rgba(10, 22, 38, 0.92) 55%);
+  pointer-events: none;
+  animation: k5ScrollHintBob 1.6s ease-in-out infinite;
+}
+
+@keyframes k5ScrollHintBob {
+  0%, 100% { transform: translateY(0); opacity: 0.7; }
+  50% { transform: translateY(4px); opacity: 1; }
+}
+
+.minigame-overlay.tier-k5 .k5-case-file-banner {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #9be8ff;
+  background: rgba(55, 227, 255, 0.08);
+  border: 1px solid rgba(55, 227, 255, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
 }

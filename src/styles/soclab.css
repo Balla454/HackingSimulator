@@ -1,0 +1,3196 @@
+/* ===========================================================================
+   SOC LAB — High School (9-12) tier
+   A SIEM-dashboard-style workstation: network topology + alert/log console +
+   case file, with a typed command terminal driving every action. Dark,
+   professional, monospace-leaning — deliberately less "game," more "tool."
+=========================================================================== */
+
+.soclab-root {
+  width: 100%;
+  height: 100vh;
+  height: var(--app-height, 100vh);
+  background: #0b0f14;
+  color: #d7e3ec;
+  font-family: 'Consolas', 'Menlo', 'Courier New', monospace;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.soclab-root.soclab-workstation {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.soclab-root * {
+  box-sizing: border-box;
+}
+
+/* --- Briefing / report / debrief centered cards ------------------------- */
+.soclab-briefing,
+.soclab-report,
+.soclab-debrief {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.soclab-briefing-card,
+.soclab-report-card,
+.soclab-debrief-card {
+  max-width: 640px;
+  width: 100%;
+  background: #111823;
+  border: 1px solid #233044;
+  border-radius: 10px;
+  padding: 32px;
+}
+
+/* --- Optional student-name field on the briefing card ---------------------*/
+.soclab-name-field {
+  margin: 18px 0 6px;
+  text-align: left;
+}
+
+.soclab-name-field label {
+  display: block;
+  font-size: 0.78rem;
+  color: #8aa0b4;
+  margin-bottom: 6px;
+}
+
+.soclab-name-field input {
+  width: 100%;
+  background: #0b0f14;
+  border: 1px solid #233044;
+  border-radius: 6px;
+  color: #d7e3ec;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 8px 10px;
+}
+
+.soclab-name-field input:focus {
+  outline: none;
+  border-color: #ff6b81;
+}
+
+/* --- Teacher class-results link + overlay ----------------------------------
+   A quiet link, not a primary action — students aren't meant to notice or
+   click it; a teacher running this on a shared classroom computer opens it
+   to see every completed case and export the scores as a CSV. */
+.soclab-teacher-link {
+  position: fixed;
+  bottom: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #4a5b6e;
+  font-size: 0.74rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: 0.7;
+}
+
+.soclab-teacher-link:hover {
+  color: #8aa0b4;
+  opacity: 1;
+}
+
+.soclab-teacher-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 24px;
+}
+
+.soclab-teacher-modal {
+  background: #111823;
+  border: 1px solid #233044;
+  border-radius: 10px;
+  padding: 24px;
+  max-width: 920px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.soclab-teacher-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.soclab-teacher-modal-header h2 {
+  margin: 0;
+  color: #f0f6fa;
+  font-size: 1.2rem;
+}
+
+.soclab-teacher-close {
+  background: none;
+  border: none;
+  color: #8aa0b4;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.soclab-teacher-close:hover {
+  color: #f0f6fa;
+}
+
+.soclab-teacher-modal-sub {
+  color: #8aa0b4;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.soclab-teacher-table-wrap {
+  overflow: auto;
+  border: 1px solid #233044;
+  border-radius: 6px;
+}
+
+.soclab-teacher-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.soclab-teacher-table th,
+.soclab-teacher-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid #1b2531;
+}
+
+.soclab-teacher-table th {
+  background: #0b0f14;
+  color: #8aa0b4;
+  position: sticky;
+  top: 0;
+}
+
+.soclab-teacher-table tr:hover td {
+  background: rgba(255, 107, 129, 0.05);
+}
+
+.soclab-teacher-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.soclab-briefing-eyebrow {
+  color: #ff6b81;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.soclab-briefing-card h1 {
+  margin: 0 0 16px;
+  font-size: 1.6rem;
+  color: #f0f6fa;
+}
+
+.soclab-briefing-card p {
+  line-height: 1.6;
+  color: #aebdcc;
+  margin: 0 0 14px;
+}
+
+.soclab-briefing-note {
+  margin-top: 1rem;
+  padding: 0.65rem 0.75rem 0.65rem 12px;
+  border-radius: 6px;
+  border-left: 3px solid #2b3c52;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.88rem;
+  color: #7e96ad;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
+.soclab-aegis-pixel-note {
+  margin-top: 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-left: 3px solid #a78bfa;
+  border-radius: 0 6px 6px 0;
+  background: rgba(139, 92, 246, 0.08);
+  font-size: 0.82rem;
+  color: #c4b5fd;
+  line-height: 1.45;
+}
+
+.soclab-header-pixel {
+  font-size: 0.68rem;
+  color: #a78bfa;
+  opacity: 0.9;
+  white-space: nowrap;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.soclab-aegis-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 107, 129, 0.45);
+  border-radius: 8px;
+  background: rgba(255, 107, 129, 0.08);
+  text-align: left;
+}
+
+.soclab-aegis-badge-icon {
+  font-size: 1.75rem;
+}
+
+.soclab-aegis-badge strong {
+  display: block;
+  color: #ff8fa3;
+  margin-bottom: 0.15rem;
+}
+
+.soclab-aegis-badge span {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+/* --- Briefing as a formatted IT ticket -----------------------------------*/
+.soclab-ticket-wrap {
+  max-width: 680px;
+  width: 100%;
+}
+
+.soclab-ticket-eyebrow {
+  color: #ff6b81;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.soclab-ticket-card {
+  background: #111823;
+  border: 1px solid #233044;
+  border-radius: 10px;
+  padding: 26px 32px 32px;
+}
+
+.soclab-ticket-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.soclab-ticket-id {
+  color: #7e96ad;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 0.85rem;
+}
+
+.soclab-ticket-status {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+
+.soclab-ticket-status-new {
+  background: #3a2e10;
+  color: #d8a032;
+}
+
+.soclab-ticket-subject {
+  margin: 0 0 18px;
+  font-size: 1.35rem;
+  color: #f0f6fa;
+  border-bottom: 1px solid #233044;
+  padding-bottom: 16px;
+}
+
+.soclab-ticket-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 24px;
+  margin-bottom: 4px;
+}
+
+.soclab-ticket-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.soclab-ticket-meta-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5c7186;
+}
+
+.soclab-ticket-meta-value {
+  font-size: 0.88rem;
+  color: #d7e3ec;
+}
+
+.soclab-priority-high {
+  color: #ff8a5c;
+  font-weight: 700;
+}
+
+.soclab-ticket-divider {
+  border-top: 1px solid #233044;
+  margin: 18px 0 14px;
+}
+
+.soclab-ticket-section-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ff6b81;
+  margin-bottom: 6px;
+}
+
+.soclab-ticket-description {
+  color: #aebdcc;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+
+.soclab-ticket-note {
+  color: #7e96ad;
+  font-size: 0.88rem;
+  border-left: 3px solid #2b3c52;
+  padding-left: 12px;
+}
+
+.soclab-ticket-card .soclab-btn {
+  margin-top: 8px;
+}
+
+.soclab-btn {
+  font-family: inherit;
+  border: 1px solid #2b3c52;
+  background: #19232f;
+  color: #d7e3ec;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.soclab-btn:hover {
+  background: #233044;
+}
+
+.soclab-btn-primary {
+  background: #c81e3a;
+  border-color: #c81e3a;
+  color: #fff;
+  font-weight: 600;
+}
+
+.soclab-btn-primary:hover {
+  background: #ff3f5f;
+}
+
+.soclab-btn-small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+/* --- Report form ---------------------------------------------------------*/
+.soclab-report-card h2 {
+  margin-top: 0;
+  color: #f0f6fa;
+}
+
+.soclab-report-card label {
+  display: block;
+  margin: 16px 0 6px;
+  font-size: 0.85rem;
+  color: #9fb3c8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.soclab-report-card textarea,
+.soclab-report-card input[type="text"] {
+  width: 100%;
+  background: #0b0f14;
+  border: 1px solid #2b3c52;
+  border-radius: 6px;
+  color: #d7e3ec;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.soclab-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px;
+}
+
+.soclab-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #c2d1de;
+  cursor: pointer;
+}
+
+.soclab-report-card .soclab-btn {
+  margin-top: 22px;
+}
+
+/* --- Debrief --------------------------------------------------------------*/
+.soclab-debrief-card {
+  text-align: center;
+}
+
+.soclab-debrief-grade {
+  font-size: 3.4rem;
+  font-weight: 700;
+  color: #ff6b81;
+  line-height: 1;
+}
+
+.soclab-debrief-outcome {
+  color: #9fb3c8;
+  font-weight: 600;
+  margin-top: -6px;
+}
+
+.soclab-debrief-breakdown {
+  text-align: left;
+  background: #0b0f14;
+  border: 1px solid #233044;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.soclab-debrief-timeline {
+  text-align: left;
+  margin: 20px 0 4px;
+}
+
+.soclab-debrief-timeline h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #f0f6fa;
+}
+
+.soclab-debrief-timeline-intro {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #8aa0b4;
+}
+
+.soclab-timeline-track {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #233044;
+  border-radius: 8px;
+  background: #0b0f14;
+  padding: 10px 12px;
+}
+
+.soclab-timeline-event {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #1a2433;
+}
+
+.soclab-timeline-event:last-child {
+  border-bottom: none;
+}
+
+.soclab-timeline-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  background: #5c7186;
+}
+
+.soclab-timeline-adversary .soclab-timeline-marker {
+  background: #ff6b81;
+  box-shadow: 0 0 6px rgba(255, 107, 129, 0.45);
+}
+
+.soclab-timeline-analyst .soclab-timeline-marker {
+  background: #6ee7a8;
+  box-shadow: 0 0 6px rgba(110, 231, 168, 0.35);
+}
+
+.soclab-timeline-system .soclab-timeline-marker {
+  background: #7ec8e8;
+}
+
+.soclab-timeline-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.soclab-timeline-side {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5c7186;
+}
+
+.soclab-timeline-adversary .soclab-timeline-side {
+  color: #ff8fa0;
+}
+
+.soclab-timeline-analyst .soclab-timeline-side {
+  color: #6ee7a8;
+}
+
+.soclab-timeline-clock {
+  font-size: 0.68rem;
+  color: #5c7186;
+  font-variant-numeric: tabular-nums;
+}
+
+.soclab-timeline-body strong {
+  display: block;
+  font-size: 0.84rem;
+  color: #f0f6fa;
+  margin-bottom: 2px;
+}
+
+.soclab-timeline-body p {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: #9fb3c8;
+}
+
+.soclab-debrief-sub {
+  color: #8298ad;
+  padding-left: 14px;
+}
+
+/* --- Main workstation layout ----------------------------------------------*/
+.soclab-workstation {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.soclab-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: #111823;
+  border-bottom: 1px solid #233044;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.soclab-header-title {
+  font-weight: 700;
+  color: #f0f6fa;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.soclab-header-phase {
+  color: #ff6b81;
+  font-size: 0.85rem;
+}
+
+/* --- Live business-disruption indicator -----------------------------------
+   Surfaces the operational-discipline cost (unnecessary isolate/block/
+   disable actions against systems with no evidence) in real time during
+   Act 2, instead of only revealing it at debrief. */
+.soclab-disruption-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.soclab-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.soclab-header-actions .soclab-btn-small {
+  margin-left: 0;
+}
+
+.soclab-disruption-clean {
+  color: #6ee7a8;
+  background: rgba(110, 231, 168, 0.08);
+  border-color: rgba(110, 231, 168, 0.25);
+}
+
+.soclab-disruption-active {
+  color: #ffb648;
+  background: rgba(255, 182, 72, 0.1);
+  border-color: rgba(255, 182, 72, 0.35);
+  animation: soclab-disruption-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes soclab-disruption-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 182, 72, 0.35); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 182, 72, 0.12); }
+}
+
+/* --- Act 2 order-ticket rail (Overcooked-style) --------------------------
+   One card per active kill-chain stage, with a countdown bar that drains in
+   real time alongside the actual stage-advance timer (not a fake/separate
+   clock) and a collapsible nudge-hint so a stuck student always has a next
+   step without the answer being handed over outright. */
+.soclab-ticket-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #0d121b;
+  border-bottom: 1px solid #233044;
+  flex-shrink: 0;
+}
+
+.soclab-ticket-lane {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.soclab-ticket-lane-label {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: #8aa0b4;
+}
+
+.soclab-ticket-lane-p1 .soclab-ticket-lane-label {
+  color: #ff6b81;
+}
+
+.soclab-ticket-lane-p2 .soclab-ticket-lane-label {
+  color: #f0b429;
+}
+
+.soclab-ticket-lane-p3 .soclab-ticket-lane-label {
+  color: #9fb6cc;
+}
+
+.soclab-ticket-lane-cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.soclab-order-ticket-p1 {
+  border-color: rgba(255, 107, 129, 0.45);
+}
+
+.soclab-petty-rail-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.soclab-petty-rail-toggle:hover .soclab-ticket-lane-label {
+  color: #c5d4e0;
+}
+
+.soclab-petty-rail-chevron {
+  font-size: 0.7rem;
+  color: #5a6f84;
+}
+
+.soclab-ticket-quick-actions {
+  margin: 6px 0 4px;
+}
+
+.soclab-act2-quiet-banner,
+.soclab-act2-intrusion-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+  border-bottom: 1px solid #233044;
+}
+
+.soclab-act2-quiet-banner {
+  background: rgba(90, 160, 200, 0.08);
+  color: #b8d4e8;
+}
+
+.soclab-act2-intrusion-banner {
+  background: rgba(255, 107, 129, 0.12);
+  color: #f5c4cc;
+  animation: soclab-intrusion-pulse 2s ease-in-out infinite;
+}
+
+@keyframes soclab-intrusion-pulse {
+  0%, 100% { background: rgba(255, 107, 129, 0.12); }
+  50%      { background: rgba(255, 107, 129, 0.2); }
+}
+
+.soclab-act2-banner-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.soclab-act2-quiet-banner strong,
+.soclab-act2-intrusion-banner strong {
+  color: #f0f6fa;
+}
+
+.soclab-act2-live-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.soclab-act2-live-card {
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid #1b2531;
+  background: #0d1219;
+}
+
+.soclab-act2-live-card-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #f0f6fa;
+  margin-bottom: 4px;
+}
+
+.soclab-act2-live-card p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #b8c8d6;
+}
+
+.soclab-act2-live-card-info {
+  border-color: #2c3b52;
+}
+
+.soclab-act2-live-card-warn {
+  border-color: rgba(240, 180, 41, 0.4);
+  background: rgba(240, 180, 41, 0.06);
+}
+
+.soclab-act2-live-card-warn .soclab-act2-live-card-title {
+  color: #f0b429;
+}
+
+.soclab-act2-live-card-action {
+  border-color: rgba(90, 160, 200, 0.4);
+  background: rgba(90, 160, 200, 0.06);
+}
+
+.soclab-act2-live-card-action .soclab-act2-live-card-title {
+  color: #7ec8e8;
+}
+
+.soclab-act2-live-card-good {
+  border-color: rgba(72, 187, 120, 0.35);
+  background: rgba(72, 187, 120, 0.06);
+}
+
+.soclab-act2-live-card-good .soclab-act2-live-card-title {
+  color: #68d391;
+}
+
+.soclab-act2-guide-reference {
+  margin-top: 4px;
+  border: 1px solid #1b2531;
+  border-radius: 8px;
+  background: #0a0e14;
+}
+
+.soclab-act2-guide-reference summary {
+  padding: 8px 12px;
+  font-size: 0.74rem;
+  color: #8aa0b4;
+  cursor: pointer;
+  user-select: none;
+}
+
+.soclab-act2-guide-reference-body {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.soclab-order-ticket {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 270px;
+  max-width: 380px;
+  background: #161d29;
+  border: 1px solid #2c3b52;
+  border-radius: 6px;
+  padding: 8px 10px 9px;
+  overflow: hidden;
+}
+
+.soclab-order-ticket-closed {
+  opacity: 0.7;
+}
+
+.soclab-order-ticket-reroute {
+  border-color: #6b3a1f;
+  background: #1d150f;
+}
+
+.soclab-order-ticket-petty {
+  border-color: #2c3b52;
+  background: #131922;
+}
+
+.soclab-order-ticket-bar-petty {
+  animation-name: soclab-ticket-drain-petty;
+}
+
+@keyframes soclab-ticket-drain-petty {
+  0%   { transform: scaleX(1);    background-color: #5b7da3; }
+  100% { transform: scaleX(0);    background-color: #3b4d65; }
+}
+
+.soclab-order-ticket-label-petty {
+  color: #9fb6cc;
+}
+
+.soclab-petty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.soclab-btn-petty-action {
+  background: #233044;
+  border: 1px solid #344459;
+  color: #dce8f2;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.soclab-btn-petty-action:hover {
+  background: #2c3b52;
+}
+
+/* Escalating nudge tickets: vague, second-hand reports that ramp up in
+   urgency (color + a faint pulse at the top tier) the longer the real
+   incident goes unnoticed. Never scored — pure signal to go check Security
+   Events, the same look-and-feel family as the petty tickets so it reads as
+   "more of the same queue, just getting louder" rather than a separate
+   system. */
+.soclab-order-ticket-urgent {
+  border-color: #6b4a1f;
+  background: #1d160f;
+}
+
+.soclab-order-ticket-urgent-l2 {
+  border-color: #8a5a1a;
+}
+
+.soclab-order-ticket-urgent-l3 {
+  border-color: #9c3030;
+  background: #1f1112;
+  animation: soclab-urgent-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes soclab-urgent-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(214, 69, 69, 0.0); }
+  50% { box-shadow: 0 0 0 3px rgba(214, 69, 69, 0.25); }
+}
+
+.soclab-order-ticket-bar-urgent {
+  animation-name: soclab-ticket-drain-urgent;
+}
+
+@keyframes soclab-ticket-drain-urgent {
+  0%   { transform: scaleX(1);    background-color: #d68a3e; }
+  100% { transform: scaleX(0);    background-color: #6b4a1f; }
+}
+
+.soclab-order-ticket-label-urgent {
+  color: #f0c08a;
+}
+
+.soclab-btn-urgent-action {
+  background: #4a3018;
+  border-color: #6b4a1f;
+}
+
+.soclab-btn-urgent-action:hover {
+  background: #5a3c1e;
+}
+
+/* Complaint tickets from the actual employee whose workstation is sitting
+   isolated — separate flavor channel from the urgent (incident) nudges, with
+   a purple/cool accent so it's visually distinct from both the petty queue
+   and the incident-escalation tickets. Sharper wording (l2) gets a slightly
+   stronger accent, same pattern as the urgent tiers. */
+.soclab-order-ticket-complaint {
+  border-color: #4a3a5c;
+  background: #16121d;
+}
+
+.soclab-order-ticket-complaint-l2 {
+  border-color: #6b3f7a;
+}
+
+.soclab-order-ticket-label-complaint {
+  color: #d2a8e8;
+}
+
+.soclab-order-ticket-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform-origin: left center;
+  animation-name: soclab-ticket-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes soclab-ticket-drain {
+  0%   { transform: scaleX(1);    background-color: #4ee08a; }
+  55%  { transform: scaleX(0.45); background-color: #4ee08a; }
+  80%  { transform: scaleX(0.2);  background-color: #d8a032; }
+  100% { transform: scaleX(0);    background-color: #ff5c5c; }
+}
+
+.soclab-order-ticket-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.soclab-order-ticket-label {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #ffcf6e;
+}
+
+.soclab-order-ticket-desc {
+  font-size: 0.76rem;
+  color: #c2d1de;
+}
+
+.soclab-order-ticket-hint {
+  color: #8fa6bd;
+  font-size: 0.72rem;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.soclab-order-ticket-hint-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* --- Act 2 ticket response form: dropdowns + Close Ticket, the "build a
+   structured response from what you've found" SOC-case-tool mechanic. */
+.soclab-order-ticket-form {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed #2c3b52;
+}
+
+.soclab-order-ticket-form-row {
+  display: flex;
+  gap: 6px;
+}
+
+.soclab-order-ticket-select {
+  flex: 1 1 50%;
+  min-width: 0;
+  background: #0d121b;
+  border: 1px solid #344459;
+  color: #dce8f2;
+  font-size: 0.72rem;
+  border-radius: 4px;
+  padding: 3px 4px;
+}
+
+.soclab-order-ticket-select:disabled {
+  opacity: 0.5;
+}
+
+.soclab-order-ticket-close-btn {
+  align-self: flex-start;
+}
+
+.soclab-order-ticket-feedback {
+  color: #ffb454;
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+.soclab-order-ticket-done {
+  color: #6fd89a;
+  font-size: 0.74rem;
+  margin-top: 4px;
+}
+
+.soclab-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.soclab-body.soclab-dragging {
+  cursor: col-resize;
+}
+
+/* --- Desktop-style resize handles -----------------------------------------
+   Thin draggable dividers between panels (vertical, for width) and above
+   the terminal (horizontal, for height) — same interaction model as
+   resizing panes in a real desktop app. */
+.soclab-resize-handle-v {
+  flex: 0 0 10px;
+  cursor: col-resize;
+  position: relative;
+}
+
+.soclab-resize-handle-v::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #233044;
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.soclab-resize-handle-v:hover::after {
+  background: #ff6b81;
+}
+
+.soclab-resize-handle-h {
+  flex-shrink: 0;
+  height: 8px;
+  margin: 0 10px;
+  cursor: row-resize;
+  position: relative;
+}
+
+.soclab-resize-handle-h::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 3px;
+  height: 2px;
+  background: #233044;
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.soclab-resize-handle-h:hover::after {
+  background: #ff6b81;
+}
+
+.soclab-panel {
+  background: #111823;
+  border: 1px solid #233044;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.soclab-panel-title {
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7e96ad;
+  border-bottom: 1px solid #233044;
+  flex-shrink: 0;
+}
+
+/* --- Topology -------------------------------------------------------------*/
+.soclab-topology-svg {
+  width: 100%;
+  flex: 1;
+}
+
+.soclab-edge {
+  stroke: #2b3c52;
+  stroke-width: 1.5;
+}
+
+.soclab-node {
+  cursor: pointer;
+}
+
+.soclab-node-bg {
+  stroke-width: 2;
+}
+
+.soclab-node-normal .soclab-node-bg { fill: #19232f; stroke: #3a4d66; }
+.soclab-node-suspicious .soclab-node-bg { fill: #3a2e10; stroke: #d8a032; }
+.soclab-node-compromised .soclab-node-bg { fill: #3a1414; stroke: #ff5c5c; animation: soclab-pulse 1.4s infinite; }
+.soclab-node-isolated .soclab-node-bg { fill: #1c1530; stroke: #b08aff; stroke-dasharray: 4 2; }
+
+@keyframes soclab-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* Act 2 ambient churn — devices fading in/out of the topology, plus the
+   real foothold's reconnect blip blended into the same visual language. */
+.soclab-node-churn { cursor: default; }
+.soclab-node-churn .soclab-node-bg { fill: #19232f; stroke: #3a4d66; opacity: 0.85; }
+
+.soclab-node-churn-joining {
+  animation: soclab-churn-join 1.3s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.soclab-node-churn-leaving {
+  animation: soclab-churn-leave 0.95s ease-in forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes soclab-churn-join {
+  0% { opacity: 0; transform: scale(0.4); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes soclab-churn-leave {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.4); }
+}
+
+.soclab-edge-churn { stroke-dasharray: 3 3; opacity: 0.55; }
+.soclab-edge-churn-joining, .soclab-edge-churn-leaving { opacity: 0.3; }
+
+.soclab-node-flash-join .soclab-node-bg {
+  animation: soclab-churn-join 1.3s ease-out, soclab-flash-join-ring 2.2s ease-out;
+}
+
+.soclab-node-selected .soclab-node-bg {
+  stroke: #6dffb0;
+  stroke-width: 2.5px;
+  filter: drop-shadow(0 0 4px rgba(109, 255, 176, 0.45));
+}
+
+@keyframes soclab-flash-join-ring {
+  0% { filter: drop-shadow(0 0 0 rgba(216, 160, 50, 0)); }
+  30% { filter: drop-shadow(0 0 6px rgba(216, 160, 50, 0.8)); }
+  100% { filter: drop-shadow(0 0 0 rgba(216, 160, 50, 0)); }
+}
+
+.soclab-node-label {
+  fill: #aebdcc;
+  font-size: 9px;
+  font-family: inherit;
+}
+
+.soclab-node-inspector {
+  border-top: 1px solid #233044;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+
+.soclab-node-inspector-title {
+  font-weight: 700;
+  color: #f0f6fa;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.soclab-node-inspector-sub {
+  color: #7e96ad;
+  font-size: 0.78rem;
+  margin: 2px 0 8px;
+}
+
+.soclab-node-inspector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.soclab-node-inspector-meta-item {
+  background: #19232f;
+  border: 1px solid #233044;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  color: #8ea3b8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.soclab-node-inspector-logs-title {
+  margin-top: 10px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5c7186;
+}
+
+.soclab-node-inspector-logs {
+  margin-top: 4px;
+  max-height: 130px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.soclab-node-inspector-log-row {
+  display: flex;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.3;
+}
+
+.soclab-node-inspector-log-ts {
+  color: #5c7186;
+  flex-shrink: 0;
+}
+
+.soclab-node-inspector-log-raw {
+  color: #aebdcc;
+  word-break: break-word;
+}
+
+.soclab-node-inspector-log-empty {
+  color: #5c7186;
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+.soclab-status-pill {
+  font-size: 0.65rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.soclab-status-normal { background: #1c2a3a; color: #7e96ad; }
+.soclab-status-suspicious { background: #3a2e10; color: #d8a032; }
+.soclab-status-compromised { background: #3a1414; color: #ff5c5c; }
+.soclab-status-isolated { background: #1c1530; color: #b08aff; }
+
+.soclab-node-hint {
+  display: inline-block;
+  background: #0b0f14;
+  border: 1px dashed #2b3c52;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  color: #ff6b81;
+  cursor: pointer;
+}
+
+.soclab-node-hint:hover {
+  background: #233044;
+  color: #dce8f2;
+}
+
+.soclab-node-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.soclab-node-action {
+  background: #233044;
+  border: 1px solid #344459;
+  color: #dce8f2;
+  font-size: 0.7rem;
+  padding: 4px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.soclab-node-action:hover {
+  background: #2c3b52;
+  border-color: #4a6278;
+}
+
+.soclab-node-action-warn {
+  border-color: rgba(255, 107, 129, 0.45);
+  color: #ffb8c4;
+}
+
+.soclab-node-action-warn:hover {
+  background: rgba(255, 107, 129, 0.12);
+}
+
+.soclab-alert-row-highlighted {
+  outline: 1px solid rgba(109, 255, 176, 0.45);
+  outline-offset: -1px;
+  background: rgba(109, 255, 176, 0.06);
+}
+
+.soclab-header-stage-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 182, 72, 0.1);
+  border: 1px solid rgba(255, 182, 72, 0.3);
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.soclab-header-stage-clock-urgent {
+  background: rgba(255, 107, 129, 0.12);
+  border-color: rgba(255, 107, 129, 0.45);
+  animation: soclab-stage-clock-pulse 1s ease-in-out infinite;
+}
+
+@keyframes soclab-stage-clock-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.soclab-header-stage-clock-label {
+  color: #b8c8d6;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.soclab-header-stage-clock-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ffb648;
+}
+
+.soclab-header-stage-clock-urgent .soclab-header-stage-clock-val {
+  color: #ff6b81;
+}
+
+.soclab-killchain-timer-urgent .soclab-killchain-timer-val {
+  color: #ff6b81;
+  animation: soclab-stage-clock-pulse 1s ease-in-out infinite;
+}
+
+/* --- SIEM panel (Wazuh-styled) ------------------------------------------ */
+.soclab-siem-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: linear-gradient(90deg, #3a0a14, #521022);
+  border-bottom: 1px solid #6e1a30;
+  flex-shrink: 0;
+}
+
+.soclab-siem-brand-mark {
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.soclab-siem-brand-name {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ff8aa3;
+  font-size: 0.82rem;
+}
+
+.soclab-siem-brand-crumb {
+  color: #6f93a8;
+  font-size: 0.74rem;
+  margin-left: 2px;
+}
+
+.soclab-siem-brand-crumb::before {
+  content: "› ";
+  color: #3a5a6b;
+}
+
+.soclab-tabs {
+  display: flex;
+  border-bottom: 1px solid #233044;
+  flex-shrink: 0;
+}
+
+.soclab-tabs button {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: #7e96ad;
+  padding: 8px 4px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.soclab-tabs button.active {
+  color: #ff6b81;
+  border-bottom-color: #ff6b81;
+}
+
+.soclab-tab-start-here {
+  box-shadow: inset 0 -2px 0 #6ee7a8, 0 0 12px rgba(110, 231, 168, 0.15);
+}
+
+.soclab-tab-start-label {
+  margin-left: 6px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6ee7a8;
+  font-weight: 600;
+}
+
+.soclab-tab-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.soclab-tab-lock {
+  margin-left: 4px;
+  font-size: 0.62rem;
+  opacity: 0.75;
+}
+
+.soclab-siem-guide {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 10px 8px;
+  padding: 10px 12px;
+  background: rgba(110, 231, 168, 0.08);
+  border: 1px solid rgba(110, 231, 168, 0.28);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #c8e6d4;
+  line-height: 1.4;
+}
+
+.soclab-siem-guide-icon {
+  font-size: 1.2rem;
+  color: #6ee7a8;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.soclab-siem-guide strong {
+  color: #e8fff2;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.soclab-siem-guide p {
+  margin: 0;
+  color: #a8c4b8;
+}
+
+.soclab-playbook-locked-note {
+  font-size: 0.76rem;
+  color: #5c7186;
+  margin: 12px 0 0;
+  line-height: 1.4;
+}
+
+.soclab-log-search {
+  margin: 8px 10px 0;
+  background: #0b0f14;
+  border: 1px solid #2b3c52;
+  border-radius: 5px;
+  color: #d7e3ec;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.soclab-note-form {
+  display: flex;
+  gap: 6px;
+  margin: 8px 10px 0;
+  flex-shrink: 0;
+}
+
+.soclab-note-form input {
+  flex: 1;
+  background: #0b0f14;
+  border: 1px solid #2b3c52;
+  border-radius: 5px;
+  color: #d7e3ec;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.soclab-note-form button {
+  background: #19232f;
+  border: 1px solid #2b3c52;
+  border-radius: 5px;
+  color: #ff6b81;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.soclab-note-form button:hover {
+  background: #233044;
+}
+
+.soclab-siem-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+}
+
+.soclab-alert-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid #233044;
+  background: #0f141c;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.soclab-alert-toolbar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5c7186;
+}
+
+.soclab-alert-toolbar-field select {
+  background: #161d29;
+  border: 1px solid #2c3b52;
+  color: #d7e3ec;
+  font-family: inherit;
+  font-size: 0.74rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.soclab-alert-mark-read {
+  margin-left: auto;
+}
+
+.soclab-alert-empty {
+  padding: 20px 8px;
+  color: #5c7186;
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+}
+
+.soclab-alert-columns {
+  display: grid;
+  grid-template-columns: 76px 56px 88px minmax(0, 1fr) 32px 72px;
+  gap: 6px 8px;
+  padding: 6px 6px 8px;
+  border-bottom: 1px solid #233044;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5c7186;
+  position: sticky;
+  top: 0;
+  background: #111823;
+  z-index: 2;
+}
+
+.soclab-alert-toolbar + .soclab-alert-columns {
+  top: 46px;
+}
+
+.soclab-alert-columns-compact {
+  top: 0;
+}
+
+.soclab-alert-col-severity {
+  color: #6ee7a8;
+  font-weight: 600;
+}
+
+.soclab-alert-row {
+  display: grid;
+  grid-template-columns: 76px 56px 88px minmax(0, 1fr) 32px 72px;
+  gap: 6px 8px;
+  padding: 8px 6px;
+  border-bottom: 1px solid #1a2433;
+  align-items: center;
+}
+
+.soclab-alert-row-unread {
+  background: rgba(110, 231, 168, 0.04);
+}
+
+.soclab-alert-new-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(110, 231, 168, 0.15);
+  color: #6ee7a8;
+  vertical-align: middle;
+}
+
+.soclab-alert-ack-btn {
+  background: transparent;
+  border: 1px solid #2c3b52;
+  color: #5c7186;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.soclab-alert-ack-btn:hover {
+  border-color: #6ee7a8;
+  color: #6ee7a8;
+  background: rgba(110, 231, 168, 0.08);
+}
+
+.soclab-alert-row-clickable {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s ease;
+}
+
+.soclab-alert-row-clickable:hover,
+.soclab-alert-row-clickable:focus-visible {
+  background: rgba(110, 231, 168, 0.06);
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(110, 231, 168, 0.25);
+}
+
+.soclab-alert-investigate {
+  justify-self: end;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5c7186;
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.soclab-alert-investigate-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.soclab-alert-row-clickable:hover .soclab-alert-investigate,
+.soclab-alert-row-clickable:focus-visible .soclab-alert-investigate {
+  opacity: 1;
+  color: #6ee7a8;
+}
+
+.soclab-session-restored {
+  background: rgba(110, 231, 168, 0.1);
+  border-bottom: 1px solid rgba(110, 231, 168, 0.3);
+  color: #9dffd0;
+  font-size: 0.82rem;
+  padding: 7px 16px;
+  text-align: center;
+}
+
+.soclab-saved-session-prompt {
+  margin: 14px 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: rgba(255, 182, 72, 0.08);
+  border: 1px solid rgba(255, 182, 72, 0.28);
+  font-size: 0.82rem;
+  color: #e8d4b0;
+  line-height: 1.4;
+}
+
+.soclab-saved-session-prompt p {
+  margin: 0 0 10px;
+}
+
+.soclab-saved-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.soclab-report-prefill-notice {
+  background: rgba(110, 231, 168, 0.08);
+  border: 1px solid rgba(110, 231, 168, 0.28);
+  border-radius: 6px;
+  color: #9dffd0;
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.soclab-severity-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 76px;
+  box-sizing: border-box;
+  padding: 3px 4px;
+  border-radius: 6px;
+  background: #1a2433;
+  border: 1px solid #2b3c52;
+  line-height: 1.1;
+}
+
+.soclab-level-high .soclab-severity-badge {
+  border-color: rgba(255, 92, 92, 0.5);
+  background: rgba(255, 92, 92, 0.12);
+}
+
+.soclab-level-med .soclab-severity-badge {
+  border-color: rgba(216, 160, 50, 0.45);
+  background: rgba(216, 160, 50, 0.1);
+}
+
+.soclab-level-low .soclab-severity-badge {
+  border-color: rgba(126, 150, 173, 0.35);
+}
+
+.soclab-severity-label {
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7e96ad;
+  font-weight: 600;
+}
+
+.soclab-severity-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.soclab-level-high .soclab-severity-value { color: #ff5c5c; }
+.soclab-level-med .soclab-severity-value { color: #d8a032; }
+.soclab-level-low .soclab-severity-value { color: #9bb0c4; }
+
+.soclab-alert-level {
+  flex-shrink: 0;
+  font-weight: 700;
+  width: 28px;
+}
+
+.soclab-level-high .soclab-alert-level { color: #ff5c5c; }
+.soclab-level-med .soclab-alert-level { color: #d8a032; }
+.soclab-level-low .soclab-alert-level { color: #7e96ad; }
+
+.soclab-alert-text {
+  color: #c2d1de;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.35;
+}
+
+.soclab-alert-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.soclab-alert-host {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ff6b81;
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+}
+
+.soclab-rule-id {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+  font-size: 0.68rem;
+  color: #5c7186;
+}
+
+.soclab-mitre-tag {
+  flex-shrink: 0;
+  background: #2a1018;
+  border: 1px solid #6e1a30;
+  color: #ff8aa3;
+  font-family: 'Courier New', monospace;
+  font-size: 0.66rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  cursor: help;
+}
+
+.soclab-log-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid #1a2433;
+}
+
+.soclab-log-row:hover {
+  background: rgba(255, 107, 129, 0.04);
+}
+
+.soclab-log-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.soclab-log-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.soclab-log-row:hover .soclab-log-actions,
+.soclab-log-row:focus-within .soclab-log-actions {
+  opacity: 1;
+}
+
+.soclab-log-action {
+  font-family: inherit;
+  font-size: 0.64rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #2b3c52;
+  background: #19232f;
+  color: #aebdcc;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.soclab-log-action:hover {
+  border-color: #ff6b81;
+  color: #f0f6fa;
+}
+
+.soclab-log-action-warn:hover {
+  border-color: #ff5c5c;
+  color: #ffb8b8;
+}
+
+.soclab-log-ts { color: #5c7186; flex-shrink: 0; }
+.soclab-log-host { color: #ff6b81; flex-shrink: 0; }
+.soclab-log-source { color: #d8a032; flex-shrink: 0; }
+.soclab-log-raw { color: #c2d1de; }
+
+.soclab-note-row {
+  padding: 5px 2px;
+  color: #c2d1de;
+  border-bottom: 1px solid #1a2433;
+}
+
+.soclab-agents-table {
+  display: flex;
+  flex-direction: column;
+  min-width: 560px;
+}
+
+.soclab-agents-row {
+  display: grid;
+  grid-template-columns: 42px 1.2fr 110px 150px 110px 130px;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid #1a2433;
+  align-items: center;
+  font-size: 0.76rem;
+}
+
+.soclab-agents-head {
+  color: #6f93a8;
+  text-transform: uppercase;
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #233044;
+}
+
+.soclab-agent-id {
+  font-family: 'Courier New', monospace;
+  color: #7e96ad;
+}
+
+.soclab-agent-ip {
+  font-family: 'Courier New', monospace;
+  color: #c2d1de;
+}
+
+.soclab-agent-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: capitalize;
+}
+
+.soclab-agent-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #6f93a8;
+  flex-shrink: 0;
+}
+
+.soclab-agent-status-active { color: #4ee08a; }
+.soclab-agent-status-active .soclab-agent-dot { background: #4ee08a; box-shadow: 0 0 4px #4ee08a; }
+.soclab-agent-status-disconnected { color: #ff5c5c; }
+.soclab-agent-status-disconnected .soclab-agent-dot { background: #ff5c5c; }
+.soclab-agent-status-agentless { color: #d8a032; }
+.soclab-agent-status-agentless .soclab-agent-dot { background: #d8a032; }
+
+.soclab-agent-keepalive {
+  color: #5c7186;
+  font-size: 0.72rem;
+}
+
+.soclab-agents-agentless {
+  opacity: 0.85;
+}
+
+.soclab-empty {
+  color: #5c7186;
+  padding: 10px 2px;
+}
+
+/* --- Case file ----------------------------------------------------------*/
+.soclab-objectives {
+  padding: 10px 12px;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+.soclab-objective {
+  color: #aebdcc;
+}
+
+.soclab-objective.done {
+  color: #6dffb0;
+}
+
+/* --- Act 1 "training room" task cards (TryHackMe-style) -----------------*/
+.soclab-panel.soclab-siem {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.soclab-panel.soclab-casefile {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.soclab-siem-toolbar {
+  flex-shrink: 0;
+}
+
+.soclab-room {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 16px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.soclab-room-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.soclab-room-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #0b0f14;
+  border: 1px solid #233044;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.soclab-room-progress-fill {
+  height: 100%;
+  background: #6dffb0;
+  transition: width 0.3s ease;
+}
+
+.soclab-room-progress-label {
+  color: #7e96ad;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.soclab-task {
+  background: #0b0f14;
+  border: 1px solid #233044;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.soclab-task.done {
+  border-color: #1f4a38;
+}
+
+.soclab-task-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 700;
+  color: #f0f6fa;
+  margin-bottom: 6px;
+}
+
+.soclab-task-check {
+  color: #ff6b81;
+  flex-shrink: 0;
+}
+
+.soclab-task.done .soclab-task-title {
+  color: #9fb3c8;
+}
+
+.soclab-task-learn {
+  color: #aebdcc;
+  margin: 0 0 8px;
+}
+
+.soclab-task-instruction {
+  color: #d7e3ec;
+  font-style: italic;
+  margin: 0 0 8px;
+}
+
+.soclab-task-hints {
+  margin-bottom: 8px;
+}
+
+.soclab-task-hint-text {
+  color: #d8a032;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+
+.soclab-hint-btn {
+  font-family: inherit;
+  background: none;
+  border: 1px dashed #2b3c52;
+  color: #7e96ad;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.soclab-hint-btn:hover {
+  background: #19232f;
+  color: #d8a032;
+}
+
+.soclab-task-answer label {
+  display: block;
+  color: #9fb3c8;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+
+.soclab-task-answer-row {
+  display: flex;
+  gap: 6px;
+}
+
+.soclab-task-answer-row input {
+  flex: 1;
+  background: #111823;
+  border: 1px solid #2b3c52;
+  border-radius: 5px;
+  color: #d7e3ec;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+.soclab-task-answer-row button {
+  background: #19232f;
+  border: 1px solid #2b3c52;
+  border-radius: 5px;
+  color: #ff6b81;
+  padding: 5px 12px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.soclab-task-answer-row button:hover {
+  background: #233044;
+}
+
+.soclab-answer-correct {
+  color: #6dffb0;
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
+.soclab-answer-incorrect {
+  color: #ff5c5c;
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
+.soclab-answer-hint-note {
+  color: #6f8298;
+  font-size: 0.74rem;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* --- Terminal -------------------------------------------------------------*/
+.soclab-terminal {
+  flex-shrink: 0;
+  height: 190px;
+  background: #0b0f14;
+  border-top: 1px solid #233044;
+  display: flex;
+  flex-direction: column;
+}
+
+.soclab-terminal-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+
+.soclab-term-line {
+  margin-bottom: 2px;
+}
+
+.soclab-term-input { color: #d7e3ec; }
+.soclab-term-output { color: #aebdcc; }
+.soclab-term-system { color: #ff6b81; font-weight: 600; }
+.soclab-term-success { color: #6dffb0; }
+.soclab-term-error { color: #ff5c5c; }
+.soclab-term-alert { color: #d8a032; font-weight: 600; }
+.soclab-term-mentor { color: #c792ff; }
+
+.soclab-terminal-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 10px;
+  border-top: 1px solid #1a2433;
+  flex-shrink: 0;
+}
+
+.soclab-prompt {
+  color: #6dffb0;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.soclab-terminal-form input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #d7e3ec;
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+/* --- Narrow screens: stack panels instead of 3-column grid --------------*/
+@media (max-width: 980px) {
+  .soclab-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .soclab-body .soclab-panel {
+    width: 100% !important;
+    min-height: 220px;
+  }
+
+  .soclab-resize-handle-v {
+    display: none;
+  }
+}
+
+/* ===========================================================================
+   Act 1 polish — guided flow cues, educational chips, live feedback
+   ===========================================================================*/
+
+/* --- Step-by-step banner (SIEM panel) ------------------------------------ */
+.soclab-act1-step-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0.5rem 0.75rem 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(255, 107, 129, 0.45);
+  border-radius: 6px;
+  background: rgba(255, 107, 129, 0.08);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.soclab-act1-step-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ff8fa3;
+  padding-top: 0.1rem;
+}
+
+.soclab-act1-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.soclab-act1-step-body strong {
+  color: #f0f4f8;
+}
+
+.soclab-alert-row-static {
+  cursor: default;
+}
+
+.soclab-room-done {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #1e2d3d;
+}
+
+.soclab-room-done-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5a7a94;
+  margin-bottom: 0.35rem;
+}
+
+.soclab-task-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.25rem;
+  opacity: 0.75;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.soclab-task-compact .soclab-task-check {
+  font-size: 0.85rem;
+}
+
+/* --- Active / upcoming task spotlight ------------------------------------ */
+.soclab-task {
+  position: relative;
+  transition: border-color 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+}
+
+.soclab-task.active {
+  border-color: #ff6b81;
+  box-shadow: 0 0 0 1px rgba(255, 107, 129, 0.35), 0 0 18px rgba(255, 107, 129, 0.18);
+  background: #0d1622;
+}
+
+/* Tasks the player hasn't reached yet recede so the eye lands on the
+   current step. Completed tasks keep their green "done" treatment. */
+.soclab-task.upcoming {
+  opacity: 0.55;
+}
+
+.soclab-task.upcoming:hover {
+  opacity: 0.85;
+}
+
+.soclab-task-now {
+  display: inline-block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0b0f14;
+  background: #ff6b81;
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-bottom: 7px;
+  animation: soclab-now-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes soclab-now-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 129, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 107, 129, 0); }
+}
+
+/* --- Concept / phase / MITRE chips ---------------------------------------- */
+.soclab-task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.soclab-task-chip {
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.soclab-chip-phase {
+  color: #9fb3c8;
+  background: #16202c;
+  border-color: #2b3c52;
+}
+
+.soclab-chip-concept {
+  color: #6dffb0;
+  background: #102019;
+  border-color: #1f4a38;
+}
+
+.soclab-chip-mitre {
+  color: #c792ff;
+  background: #1a1426;
+  border-color: #3a2b52;
+  cursor: help;
+}
+
+/* --- "Why this matters" reinforcement callout ----------------------------- */
+.soclab-task-why {
+  margin-top: 2px;
+  padding: 7px 9px 7px 11px;
+  border-left: 2px solid #c792ff;
+  background: rgba(199, 146, 255, 0.07);
+  border-radius: 0 5px 5px 0;
+  color: #b9c6d4;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.soclab-task-why-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c792ff;
+  margin-bottom: 3px;
+}
+
+/* --- Act 1 completion banner ---------------------------------------------- */
+.soclab-room-complete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #0e2018, #0c1722);
+  border: 1px solid #1f4a38;
+  border-radius: 8px;
+  animation: soclab-flash-in 0.5s ease;
+}
+
+.soclab-room-complete-badge {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #6dffb0;
+  color: #0b0f14;
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 14px rgba(109, 255, 176, 0.4);
+}
+
+.soclab-room-complete-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.soclab-room-complete-text strong { color: #6dffb0; }
+.soclab-room-complete-text span { color: #aebdcc; }
+
+.soclab-room-complete .soclab-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: stretch;
+}
+
+/* --- New-row flash-in (alerts + logs) ------------------------------------- */
+@keyframes soclab-flash-in {
+  0% { background-color: rgba(255, 107, 129, 0.28); }
+  100% { background-color: transparent; }
+}
+
+.soclab-flash-in {
+  animation: soclab-flash-in 1.6s ease-out;
+}
+
+.soclab-alert-row.soclab-flash-in {
+  box-shadow: inset 2px 0 0 #ff6b81;
+}
+
+/* --- Topology "look here" halo on suspicious / compromised hosts ----------- */
+.soclab-node-halo {
+  fill: none;
+  stroke-width: 2;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.soclab-node-halo-suspicious {
+  stroke: #d8a032;
+  animation: soclab-halo-pulse 1.8s ease-out infinite;
+}
+
+.soclab-node-halo-compromised {
+  stroke: #ff5c5c;
+  animation: soclab-halo-pulse 1.2s ease-out infinite;
+}
+
+@keyframes soclab-halo-pulse {
+  0% { opacity: 0.7; r: 17; }
+  100% { opacity: 0; r: 27; }
+}
+
+/* --- SIEM tab "unseen activity" glow -------------------------------------- */
+.soclab-tabs button.soclab-tab-pulse {
+  color: #d8a032;
+  animation: soclab-tab-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes soclab-tab-glow {
+  0%, 100% { background: transparent; }
+  50% { background: rgba(216, 160, 50, 0.12); }
+}
+
+.soclab-tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d8a032;
+  margin-left: 5px;
+  vertical-align: middle;
+  box-shadow: 0 0 6px #d8a032;
+}
+
+/* --- Tier intro / onboarding polish ------------------------------------- */
+.soclab-briefing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.soclab-btn-secondary {
+  background: transparent;
+  border-color: #3a4d63;
+  color: #8aa0b4;
+}
+
+.soclab-btn-secondary:hover {
+  background: #19232f;
+  color: #d7e3ec;
+}
+
+.soclab-header-playbook-btn {
+  margin-left: 0;
+}
+
+.soclab-panel-unlock-toast {
+  background: rgba(255, 107, 129, 0.12);
+  border-bottom: 1px solid rgba(255, 107, 129, 0.35);
+  color: #ffb8c4;
+  font-size: 0.82rem;
+  padding: 8px 16px;
+  text-align: center;
+  animation: soclab-toast-in 0.35s ease;
+}
+
+@keyframes soclab-toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.soclab-panel-unlock-in {
+  animation: soclab-panel-unlock 0.45s ease;
+}
+
+.soclab-panel-just-unlocked {
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 129, 0.45), 0 0 20px rgba(255, 107, 129, 0.12);
+}
+
+@keyframes soclab-panel-unlock {
+  from { opacity: 0.35; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* --- Desk tour overlay --------------------------------------------------- */
+.soclab-tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.45);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+}
+
+.soclab-tour-card {
+  pointer-events: auto;
+  background: #111823;
+  border: 1px solid #ff6b81;
+  border-radius: 10px;
+  padding: 20px 22px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.soclab-tour-step-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ff6b81;
+  margin-bottom: 6px;
+}
+
+.soclab-tour-card h3 {
+  margin: 0 0 8px;
+  color: #f0f6fa;
+  font-size: 1.1rem;
+}
+
+.soclab-tour-card p {
+  margin: 0 0 14px;
+  color: #b8c8d6;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.soclab-tour-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.soclab-tour-highlight {
+  position: relative;
+  z-index: 42;
+  box-shadow: 0 0 0 2px #ff6b81, 0 0 24px rgba(255, 107, 129, 0.35);
+}
+
+/* --- Analyst playbook drawer (overlays — does not squeeze the main grid) */
+.soclab-playbook-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.5);
+  z-index: 44;
+}
+
+.soclab-playbook-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(300px, 92vw);
+  z-index: 45;
+  background: #111823;
+  border-right: 1px solid #233044;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+}
+
+.soclab-playbook-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #233044;
+}
+
+.soclab-playbook-close {
+  background: none;
+  border: none;
+  color: #8aa0b4;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 8px 12px;
+  line-height: 1;
+}
+
+.soclab-playbook-close:hover {
+  color: #f0f6fa;
+}
+
+.soclab-playbook-body {
+  overflow-y: auto;
+  padding: 0 8px 10px;
+  flex: 1;
+}
+
+.soclab-playbook-section {
+  margin-bottom: 12px;
+}
+
+.soclab-playbook-section-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ff6b81;
+  margin-bottom: 6px;
+}
+
+.soclab-playbook-cmd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  background: #0b0f14;
+  border: 1px solid #1b2531;
+  border-radius: 5px;
+  padding: 6px 8px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  color: #d7e3ec;
+  font-family: inherit;
+}
+
+.soclab-playbook-cmd:hover {
+  border-color: #3a4d63;
+  background: #111823;
+}
+
+.soclab-playbook-cmd code {
+  font-size: 0.74rem;
+  color: #6dffb0;
+}
+
+.soclab-playbook-cmd span {
+  font-size: 0.68rem;
+  color: #8aa0b4;
+  line-height: 1.3;
+}
+
+/* --- Act 2 structured case-file guidance --------------------------------- */
+.soclab-act2-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.soclab-act2-live {
+  background: rgba(255, 107, 129, 0.1);
+  border: 1px solid rgba(255, 107, 129, 0.35);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.soclab-act2-live-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ff6b81;
+  margin-bottom: 4px;
+}
+
+.soclab-act2-live strong {
+  display: block;
+  color: #f0f6fa;
+  margin-bottom: 4px;
+}
+
+.soclab-act2-live p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b8c8d6;
+  line-height: 1.35;
+}
+
+.soclab-act2-guide-item {
+  border: 1px solid #1b2531;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #0d1219;
+}
+
+.soclab-act2-guide-title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #f0f6fa;
+  margin-bottom: 6px;
+}
+
+.soclab-act2-guide-num {
+  color: #ff6b81;
+  margin-right: 4px;
+}
+
+.soclab-act2-guide-instruction {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #d7e3ec;
+}
+
+.soclab-act2-guide-why {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #8aa0b4;
+}
+
+.soclab-act2-guide-why span {
+  display: inline-block;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5a6f84;
+  margin-right: 4px;
+}
+
+/* --- Kill-chain progress bar (Act 2) ----------------------------------- */
+.soclab-killchain-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #0d121b;
+  border-bottom: 1px solid #233044;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.soclab-killchain-steps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.soclab-killchain-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: #5c7186;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.soclab-killchain-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2b3c52;
+  flex-shrink: 0;
+}
+
+.soclab-killchain-step-done {
+  color: #6ee7a8;
+}
+
+.soclab-killchain-step-done .soclab-killchain-dot {
+  background: #6ee7a8;
+}
+
+.soclab-killchain-step-active {
+  color: #ffb648;
+  border-color: rgba(255, 182, 72, 0.4);
+  background: rgba(255, 182, 72, 0.08);
+}
+
+.soclab-killchain-step-active .soclab-killchain-dot {
+  background: #ffb648;
+  box-shadow: 0 0 8px rgba(255, 182, 72, 0.6);
+  animation: soclab-killchain-pulse 1.4s ease-in-out infinite;
+}
+
+.soclab-killchain-step-contained {
+  color: #6ee7a8;
+  border-color: rgba(110, 231, 168, 0.35);
+}
+
+.soclab-killchain-step-breached {
+  color: #ff6b81;
+}
+
+.soclab-killchain-step-breached .soclab-killchain-dot {
+  background: #ff6b81;
+}
+
+@keyframes soclab-killchain-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.soclab-killchain-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  line-height: 1.1;
+}
+
+.soclab-killchain-timer-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffb648;
+  font-variant-numeric: tabular-nums;
+}
+
+.soclab-killchain-timer-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5c7186;
+}
+
+.soclab-killchain-outcome {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #ff6b81;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* --- Act 2 live HUD ------------------------------------------------------ */
+.soclab-act2-hud {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 5px 16px;
+  background: #111823;
+  border-bottom: 1px solid #1b2531;
+  font-size: 0.76rem;
+  color: #8aa0b4;
+  flex-shrink: 0;
+}
+
+.soclab-hud-item strong {
+  color: #d7e3ec;
+  font-weight: 600;
+}
+
+.soclab-hud-warn strong {
+  color: #ffb648;
+}
+
+/* --- Evidence tray ------------------------------------------------------- */
+.soclab-evidence-tray {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid #1b2531;
+  background: #0d1219;
+}
+
+.soclab-evidence-tray-title {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6ee7a8;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.soclab-evidence-empty {
+  font-size: 0.74rem;
+  color: #5c7186;
+  line-height: 1.35;
+}
+
+.soclab-evidence-empty code {
+  color: #6dffb0;
+  font-size: 0.72rem;
+}
+
+.soclab-evidence-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.soclab-evidence-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.soclab-evidence-label {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5c7186;
+  width: 52px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.soclab-evidence-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.soclab-evidence-chip {
+  font-family: inherit;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid #2b3c52;
+  background: #19232f;
+  color: #d7e3ec;
+  cursor: pointer;
+}
+
+.soclab-evidence-chip:hover {
+  border-color: #6ee7a8;
+  color: #6ee7a8;
+}
+
+.soclab-evidence-chip-ip {
+  font-variant-numeric: tabular-nums;
+}
+
+.soclab-evidence-chip-observed {
+  border-style: dashed;
+  color: #9fb6cc;
+}
+
+.soclab-evidence-chip-confirmed {
+  border-color: rgba(255, 107, 129, 0.45);
+  color: #ffb8c4;
+}
+
+.soclab-intel-policy-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(199, 146, 255, 0.08);
+  border-bottom: 1px solid rgba(199, 146, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.soclab-intel-policy-body strong {
+  display: block;
+  font-size: 0.8rem;
+  color: #e0c8ff;
+  margin-bottom: 3px;
+}
+
+.soclab-intel-policy-body p {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: #b8a8d0;
+}
+
+.soclab-intel-policy-dismiss {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: #8aa0b4;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.soclab-intel-policy-dismiss:hover {
+  color: #dce8f2;
+}
+
+.soclab-playbook-intel-note {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(199, 146, 255, 0.08);
+  border: 1px solid rgba(199, 146, 255, 0.2);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #b8a8d0;
+}
+
+.soclab-playbook-intel-note strong {
+  color: #e0c8ff;
+}
+
+.soclab-node-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.soclab-term-gui-echo {
+  color: #7e96ad;
+  font-style: italic;
+}

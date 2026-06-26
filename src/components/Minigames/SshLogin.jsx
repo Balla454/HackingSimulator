@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+// Age-tier max login attempts before lockout: K-5 gets the most forgiving runway
+const TIER_MAX_ATTEMPTS = { k5: 10, middle: 5, high: 3 };
+
 const SshLogin = ({ gameState, onSSHComplete, onFailure, addOutput, targetIp, onExit }) => {
+  const ageTier = gameState?.ageTier || 'middle';
+  const maxLoginAttempts = TIER_MAX_ATTEMPTS[ageTier] || TIER_MAX_ATTEMPTS.middle;
   const [ip, setIp] = useState('');
   const [username, setUsername] = useState('root');
   const [password, setPassword] = useState('');
@@ -310,11 +315,11 @@ const SshLogin = ({ gameState, onSSHComplete, onFailure, addOutput, targetIp, on
       return;
     }
     
-    if (attempts >= 5) {
+    if (attempts >= maxLoginAttempts) {
       setAccountLocked(true);
       setStep('failed');
       setFailureReason('🔒 ACCOUNT LOCKOUT - Maximum login attempts exceeded');
-      addToLog('Account locked after 5 failed attempts', 'error');
+      addToLog(`Account locked after ${maxLoginAttempts} failed attempts`, 'error');
       addToLog('Security policy enforced - account disabled', 'error');
       return;
     }
@@ -818,7 +823,7 @@ const SshLogin = ({ gameState, onSSHComplete, onFailure, addOutput, targetIp, on
             <div className="login-controls">
               <button 
                 onClick={handleLogin}
-                disabled={loading || step === 'success' || attempts >= 5}
+                disabled={loading || step === 'success' || attempts >= maxLoginAttempts}
                 className={`login-btn ${loading ? 'loading' : ''}`}
               >
                 {loading ? (
@@ -833,8 +838,8 @@ const SshLogin = ({ gameState, onSSHComplete, onFailure, addOutput, targetIp, on
               
               <div className="attempt-counter">
                 <span>Attempts: </span>
-                <span className={attempts >= 4 ? 'critical' : attempts >= 2 ? 'warning' : 'normal'}>
-                  {attempts}/5
+                <span className={attempts >= maxLoginAttempts - 1 ? 'critical' : attempts >= 2 ? 'warning' : 'normal'}>
+                  {attempts}/{maxLoginAttempts}
                 </span>
               </div>
             </div>

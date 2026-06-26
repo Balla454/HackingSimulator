@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
+// Age-tier device counts: fewer, simpler devices for K-5; more for high schoolers
+const TIER_DEVICE_RANGE = {
+  k5: { min: 3, span: 3 },      // 3-5 devices
+  middle: { min: 5, span: 6 },  // 5-10 devices (original)
+  high: { min: 7, span: 7 }     // 7-13 devices
+};
+
 const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) => {
+  const ageTier = gameState?.ageTier || 'middle';
+  const isK5 = ageTier === 'k5';
   // Enhanced state management with proper cleanup
   const [currentStep, setCurrentStep] = useState('setup'); // setup, analysis, scanning, results
   const [scanType, setScanType] = useState('basic');
@@ -32,17 +41,24 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
     {
       id: 'stealth',
       name: 'Stealth Scan',
+      k5Name: 'Sneaky Look',
       icon: '🥷',
       description: 'Low-profile scanning to avoid detection',
+      k5Description: 'Look quietly so nobody notices',
       speed: 'Very Slow',
       accuracy: 'Medium',
       stealth: 'Excellent',
       detectionRisk: 10,
       effectiveness: { low: 95, medium: 80, high: 60, critical: 40 },
       bestFor: ['High-security networks', 'Corporate environments', 'When stealth is priority'],
+      k5BestFor: ['Protected computers', 'When we need to be careful'],
       consequences: {
         wrong: 'May miss critical vulnerabilities due to limited scan depth',
         right: 'Successfully avoids detection while gathering intelligence'
+      },
+      k5Consequences: {
+        wrong: 'Might miss some computers',
+        right: 'Nobody catches us looking!'
       },
       timeMultiplier: 2.5,
       complexity: 'Advanced - requires patience and precision'
@@ -50,17 +66,24 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
     {
       id: 'basic',
       name: 'Basic Ping Sweep',
+      k5Name: 'Quick Wave',
       icon: '📡',
       description: 'Simple network discovery scan',
+      k5Description: 'Fast hello to all computers nearby',
       speed: 'Fast',
       accuracy: 'Low',
       stealth: 'Poor',
       detectionRisk: 70,
       effectiveness: { low: 90, medium: 60, high: 30, critical: 10 },
       bestFor: ['Low-security networks', 'Initial reconnaissance', 'Quick overview'],
+      k5BestFor: ['Open networks', 'First time looking around'],
       consequences: {
         wrong: 'High chance of detection on secure networks, limited information',
         right: 'Quick results for basic network mapping'
+      },
+      k5Consequences: {
+        wrong: 'Everyone notices us looking',
+        right: 'Quick and easy!'
       },
       timeMultiplier: 0.5,
       complexity: 'Beginner - fast but limited'
@@ -68,17 +91,24 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
     {
       id: 'comprehensive',
       name: 'Comprehensive Scan',
+      k5Name: 'Detailed Look',
       icon: '🔍',
       description: 'Deep analysis of all network services',
+      k5Description: 'Careful check of everything',
       speed: 'Slow',
       accuracy: 'Excellent',
       stealth: 'Fair',
       detectionRisk: 50,
       effectiveness: { low: 85, medium: 90, high: 85, critical: 70 },
       bestFor: ['Medium-security networks', 'Detailed vulnerability assessment', 'Balanced approach'],
+      k5BestFor: ['Medium-protected computers', 'When we want to know lots'],
       consequences: {
         wrong: 'Moderate detection risk, may be overkill for simple networks',
         right: 'Thorough analysis reveals detailed vulnerability information'
+      },
+      k5Consequences: {
+        wrong: 'Might be noticed',
+        right: 'We learn lots of details!'
       },
       timeMultiplier: 1.5,
       complexity: 'Intermediate - balanced approach'
@@ -86,17 +116,24 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
     {
       id: 'aggressive',
       name: 'Aggressive Scan',
+      k5Name: 'Bold Scan',
       icon: '⚡',
       description: 'Fast, intensive scanning with service detection',
+      k5Description: 'Fast but might get noticed',
       speed: 'Very Fast',
       accuracy: 'High',
       stealth: 'Very Poor',
       detectionRisk: 90,
       effectiveness: { low: 70, medium: 75, high: 80, critical: 85 },
       bestFor: ['Critical security assessments', 'Time-sensitive operations', 'When detection is acceptable'],
+      k5BestFor: ['Only when we need speed!'],
       consequences: {
         wrong: 'Almost guaranteed detection, may trigger security responses',
         right: 'Rapid comprehensive results for high-security targets'
+      },
+      k5Consequences: {
+        wrong: 'Alarms go off!',
+        right: 'Super quick!'
       },
       timeMultiplier: 0.8,
       complexity: 'Expert - high risk, high reward'
@@ -104,17 +141,24 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
     {
       id: 'adaptive',
       name: 'Adaptive Scan',
+      k5Name: 'Smart Scan',
       icon: '🧠',
       description: 'AI-powered scanning that adjusts based on target responses',
+      k5Description: 'Smart computer helps us choose',
       speed: 'Variable',
       accuracy: 'Very High',
       stealth: 'Good',
       detectionRisk: 30,
       effectiveness: { low: 85, medium: 90, high: 95, critical: 90 },
       bestFor: ['Unknown security levels', 'Advanced persistent threats', 'Maximum effectiveness'],
+      k5BestFor: ['When we don\'t know what\'s there'],
       consequences: {
         wrong: 'Complex setup may be unnecessary for simple targets',
         right: 'Optimal results regardless of network security configuration'
+      },
+      k5Consequences: {
+        wrong: 'Might be too fancy',
+        right: 'Works on anything!'
       },
       timeMultiplier: 1.2,
       complexity: 'Expert - requires advanced knowledge'
@@ -232,7 +276,8 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
     };
 
     const baseDevices = deviceProfiles[targetNetwork.id] || deviceProfiles['local-subnet'];
-    const deviceCount = Math.floor(Math.random() * 6) + 5;
+    const tierRange = TIER_DEVICE_RANGE[ageTier] || TIER_DEVICE_RANGE.middle;
+    const deviceCount = Math.floor(Math.random() * tierRange.span) + tierRange.min;
     
     return Array.from({ length: deviceCount }, (_, i) => {
       const template = baseDevices[Math.floor(Math.random() * baseDevices.length)];
@@ -293,7 +338,7 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
         riskLevel: vulnerabilities.length > 2 ? 'High' : vulnerabilities.length > 0 ? 'Medium' : 'Low'
       };
     });
-  }, [targetNetwork, scanType, generateVulnerabilities]);
+  }, [targetNetwork, scanType, generateVulnerabilities, ageTier]);
 
   // Fixed timeout and interval management
   const startTimeCountdown = (timeLimit) => {
@@ -534,29 +579,29 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
   };
 
   return (
-    <div className="network-scanner-enhanced">
+    <div className={`network-scanner-enhanced${isK5 ? ' tier-k5' : ''}`}>
       {/* Header with step indicator */}
       <div className="scanner-header-enhanced">
         <div className="mission-badge">
           <div className="mission-icon">🔍</div>
           <div className="mission-info">
-            <h2>Network Scanner</h2>
-            <div className="mission-scenario">Advanced network reconnaissance and vulnerability discovery</div>
+            <h2>{isK5 ? '🔍 Look Around' : 'Network Scanner'}</h2>
+            <div className="mission-scenario">{isK5 ? "Let's see what computers are nearby!" : 'Advanced network reconnaissance and vulnerability discovery'}</div>
           </div>
         </div>
-        
+
         <div className="progress-steps">
           <div className={`step ${currentStep === 'setup' ? 'active' : currentStep !== 'setup' ? 'completed' : ''}`}>
             <div className="step-number">1</div>
-            <div className="step-label">Setup</div>
+            <div className="step-label">{isK5 ? 'Pick a Spot' : 'Setup'}</div>
           </div>
           <div className={`step ${currentStep === 'analysis' ? 'active' : ['scanning', 'results'].includes(currentStep) ? 'completed' : ''}`}>
             <div className="step-number">2</div>
-            <div className="step-label">Analysis</div>
+            <div className="step-label">{isK5 ? 'Get Ready' : 'Analysis'}</div>
           </div>
           <div className={`step ${currentStep === 'scanning' ? 'active' : currentStep === 'results' ? 'completed' : ''}`}>
             <div className="step-number">3</div>
-            <div className="step-label">Scanning</div>
+            <div className="step-label">{isK5 ? 'Looking' : 'Scanning'}</div>
           </div>
           <div className={`step ${currentStep === 'results' ? 'active' : ''}`}>
             <div className="step-number">4</div>
@@ -570,13 +615,13 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
       {currentStep === 'setup' && (
         <div className="step-content">
           <div className="step-header">
-            <h3>🎯 Network Target Selection</h3>
-            <p>Choose the network range for reconnaissance. Consider the security level and your available tools.</p>
+            <h3>{isK5 ? '🏠 Pick a Place to Look' : '🎯 Network Target Selection'}</h3>
+            <p>{isK5 ? 'Where should we look for computers?' : 'Choose the network range for reconnaissance. Consider the security level and your available tools.'}</p>
           </div>
-          
+
           <div className="targets-enhanced-grid">
             {networkTargets.map(target => (
-              <div 
+              <div
                 key={target.id}
                 className={`target-card-enhanced ${targetNetwork?.id === target.id ? 'selected' : ''}`}
                 onClick={() => setTargetNetwork(target)}
@@ -585,7 +630,15 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                 <div className="target-info">
                   <h4>{target.name}</h4>
                   <div className="target-description">{target.description}</div>
-                  
+
+                  {isK5 ? (
+                    <div className="security-overview">
+                      <div className="detail-item">
+                        <span className="detail-label">How many computers:</span>
+                        <span className="detail-value">{target.expectedDevices}</span>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="security-overview">
                     <div className="security-level">
                       <span className="security-label">Security Level:</span>
@@ -593,7 +646,7 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                         {target.securityLevel.toUpperCase()}
                       </span>
                     </div>
-                    
+
                     <div className="security-details">
                       <div className="detail-item">
                         <span className="detail-label">Expected Devices:</span>
@@ -609,14 +662,15 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
 
-                {targetNetwork?.id === target.id && (
+                {!isK5 && targetNetwork?.id === target.id && (
                   <div className="target-details-expanded">
                     <div className="security-assessment">
                       <h5>🔒 Security Assessment</h5>
                       <p>{target.securityDesc}</p>
-                      
+
                       <div className="vuln-preview">
                         <strong>Common Vulnerabilities:</strong>
                         <div className="vuln-tags">
@@ -625,7 +679,7 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="recommendation">
                         <strong>💡 Recommended Scan:</strong>
                         <span className="recommended-scan">{target.recommendedScan}</span>
@@ -633,21 +687,21 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                     </div>
                   </div>
                 )}
-                
+
                 {targetNetwork?.id === target.id && (
                   <div className="selection-indicator">✓ SELECTED</div>
                 )}
               </div>
             ))}
           </div>
-          
+
           {targetNetwork && (
             <div className="continue-button-container">
-              <button 
+              <button
                 className="continue-btn-enhanced"
                 onClick={() => setCurrentStep('method')}
               >
-                Select Scan Method →
+                {isK5 ? 'Pick How to Look →' : 'Select Scan Method →'}
               </button>
             </div>
           )}
@@ -658,29 +712,31 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
       {currentStep === 'method' && targetNetwork && (
         <div className="step-content">
           <div className="step-header">
-            <h3>⚔️ Scan Strategy Selection</h3>
-            <p>Choose your scanning approach carefully. The wrong choice could result in detection or poor intelligence gathering.</p>
+            <h3>{isK5 ? '🔎 Pick How to Look' : '⚔️ Scan Strategy Selection'}</h3>
+            <p>{isK5 ? 'Some ways are faster, some are sneakier!' : 'Choose your scanning approach carefully. The wrong choice could result in detection or poor intelligence gathering.'}</p>
           </div>
 
           <div className="target-reminder">
             <span className="target-avatar-small">{targetNetwork.icon}</span>
-            <span>Target: <strong>{targetNetwork.name}</strong></span>
-            <span className={`security-badge-small ${targetNetwork.securityLevel}`}>
-              {targetNetwork.securityLevel.toUpperCase()} SECURITY
-            </span>
+            <span>{isK5 ? 'Looking at: ' : 'Target: '}<strong>{targetNetwork.name}</strong></span>
+            {!isK5 && (
+              <span className={`security-badge-small ${targetNetwork.securityLevel}`}>
+                {targetNetwork.securityLevel.toUpperCase()} SECURITY
+              </span>
+            )}
             <button className="change-target-btn" onClick={() => setCurrentStep('setup')}>
-              Change Target
+              {isK5 ? 'Pick a Different Spot' : 'Change Target'}
             </button>
           </div>
-          
+
           <div className="methods-enhanced-grid">
             {scanTypes.map(method => {
               const isSelected = scanType === method.id;
               const analysis = targetNetwork ? analyzeNetworkSecurity(targetNetwork, method.id) : null;
               const isOptimal = targetNetwork?.recommendedScan === method.id;
-              
+
               return (
-                <div 
+                <div
                   key={method.id}
                   className={`method-card-enhanced ${isSelected ? 'selected' : ''} ${isOptimal ? 'optimal' : ''}`}
                   onClick={() => setScanType(method.id)}
@@ -688,41 +744,45 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                   <div className="method-header">
                     <div className="method-icon-large">{method.icon}</div>
                     <div className="method-title">
-                      <h4>{method.name}</h4>
-                      <div className="method-complexity">{method.complexity}</div>
-                      {isOptimal && <div className="optimal-badge">⭐ RECOMMENDED</div>}
+                      <h4>{isK5 ? method.k5Name : method.name}</h4>
+                      {!isK5 && <div className="method-complexity">{method.complexity}</div>}
+                      {!isK5 && isOptimal && <div className="optimal-badge">⭐ RECOMMENDED</div>}
                     </div>
                   </div>
-                  
-                  <p className="method-description">{method.description}</p>
-                  
+
+                  <p className="method-description">{isK5 ? method.k5Description : method.description}</p>
+
                   <div className="method-stats-grid">
                     <div className="stat-item">
                       <span className="stat-label">Speed:</span>
                       <span className="stat-value">{method.speed}</span>
                     </div>
-                    <div className="stat-item">
-                      <span className="stat-label">Accuracy:</span>
-                      <span className="stat-value">{method.accuracy}</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="stat-label">Stealth:</span>
-                      <span className="stat-value">{method.stealth}</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="stat-label">Detection Risk:</span>
-                      <span className="stat-value risk">{method.detectionRisk}%</span>
-                    </div>
+                    {!isK5 && (
+                      <>
+                        <div className="stat-item">
+                          <span className="stat-label">Accuracy:</span>
+                          <span className="stat-value">{method.accuracy}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="stat-label">Stealth:</span>
+                          <span className="stat-value">{method.stealth}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="stat-label">Detection Risk:</span>
+                          <span className="stat-value risk">{method.detectionRisk}%</span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  {analysis && (
+                  {!isK5 && analysis && (
                     <div className="effectiveness-analysis">
                       <div className="effectiveness-bar">
                         <span className="analysis-label">Effectiveness vs {targetNetwork.securityLevel} security:</span>
                         <div className="progress-bar">
-                          <div 
-                            className="progress-fill" 
-                            style={{ 
+                          <div
+                            className="progress-fill"
+                            style={{
                               width: `${analysis.effectiveness}%`,
                               backgroundColor: analysis.effectiveness > 70 ? '#4CAF50' : analysis.effectiveness > 50 ? '#FF9800' : '#f44336'
                             }}
@@ -730,33 +790,37 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                         </div>
                         <span className="percentage">{analysis.effectiveness}%</span>
                       </div>
-                      
+
                       <div className="strategic-advice">
                         {analysis.strategicAdvice}
                       </div>
                     </div>
                   )}
-                  
-                  <div className="method-best-for">
-                    <strong>Best For:</strong>
-                    <ul>
-                      {method.bestFor.map((use, index) => (
-                        <li key={index}>{use}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div className="consequences">
-                    <div className="consequence-item">
-                      <strong>✅ Success:</strong>
-                      <span>{method.consequences.right}</span>
+
+                  {!isK5 && (
+                    <div className="method-best-for">
+                      <strong>Best For:</strong>
+                      <ul>
+                        {method.bestFor.map((use, index) => (
+                          <li key={index}>{use}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="consequence-item">
-                      <strong>❌ Risk:</strong>
-                      <span>{method.consequences.wrong}</span>
+                  )}
+
+                  {!isK5 && (
+                    <div className="consequences">
+                      <div className="consequence-item">
+                        <strong>✅ Success:</strong>
+                        <span>{method.consequences.right}</span>
+                      </div>
+                      <div className="consequence-item">
+                        <strong>❌ Risk:</strong>
+                        <span>{method.consequences.wrong}</span>
+                      </div>
                     </div>
-                  </div>
-                  
+                  )}
+
                   {isSelected && (
                     <div className="selection-indicator">✓ SELECTED</div>
                   )}
@@ -764,14 +828,14 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
               );
             })}
           </div>
-          
+
           {scanType && (
             <div className="continue-button-container">
-              <button 
+              <button
                 className="execute-btn-enhanced"
                 onClick={startScan}
               >
-                🚀 Execute Scan
+                {isK5 ? '🚀 Start Looking' : '🚀 Execute Scan'}
               </button>
             </div>
           )}
@@ -785,7 +849,7 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
             <div className="scan-info">
               <span className="target-avatar-analysis">{targetNetwork.icon}</span>
               <div className="analysis-title">
-                <h3>🔍 Pre-Scan Security Analysis</h3>
+                <h3>{isK5 ? '🔍 Getting Ready to Look' : '🔍 Pre-Scan Security Analysis'}</h3>
                 <div className="scan-details">
                   {scanTypes.find(s => s.id === scanType)?.name} → {targetNetwork.name}
                 </div>
@@ -793,6 +857,19 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
             </div>
           </div>
 
+          {isK5 ? (
+            <div className="security-assessment-display">
+              <div className="progress-section">
+                <h4>📊 Looking...</h4>
+                <div className="progress-display">
+                  <div className="progress-bar-large">
+                    <div className="progress-fill-large" style={{ width: `${scanProgress}%` }}></div>
+                  </div>
+                  <div className="progress-text">{Math.round(scanProgress)}% Done</div>
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="security-assessment-display">
             <div className="assessment-section">
               <h4>🎯 Target Assessment</h4>
@@ -824,9 +901,9 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                       <div className="effectiveness-display">
                         <span className="metric-label">Expected Effectiveness:</span>
                         <div className="effectiveness-bar-large">
-                          <div 
-                            className="effectiveness-fill" 
-                            style={{ 
+                          <div
+                            className="effectiveness-fill"
+                            style={{
                               width: `${analysis.effectiveness}%`,
                               backgroundColor: analysis.effectiveness > 70 ? '#4CAF50' : analysis.effectiveness > 50 ? '#FF9800' : '#f44336'
                             }}
@@ -834,14 +911,14 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                         </div>
                         <span className="effectiveness-percentage">{analysis.effectiveness}%</span>
                       </div>
-                      
+
                       <div className="risk-assessment">
                         <span className="metric-label">Detection Risk:</span>
                         <span className={`risk-level ${analysis.detectionLikelihood > 70 ? 'high' : analysis.detectionLikelihood > 40 ? 'medium' : 'low'}`}>
                           {analysis.detectionLikelihood}% Chance
                         </span>
                       </div>
-                      
+
                       <div className="strategic-recommendation">
                         {analysis.strategicAdvice}
                       </div>
@@ -860,12 +937,13 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                 </div>
                 <div className="progress-text">{Math.round(scanProgress)}% Complete</div>
               </div>
-              
+
               <div className="current-activity">
                 <strong>Current Activity:</strong> {currentTarget}
               </div>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -877,29 +955,30 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
               <div className="scan-info-header">
                 <div className="scan-avatar">{scanTypes.find(s => s.id === scanType)?.icon || '🔍'}</div>
                 <div className="scanning-title">
-                  <h3>{scanTypes.find(s => s.id === scanType)?.name || 'Network Scan'} in Progress</h3>
-                  <div className="target-info">Target: {targetNetwork?.name} ({targetNetwork?.range})</div>
+                  <h3>{isK5 ? 'Looking Around...' : `${scanTypes.find(s => s.id === scanType)?.name || 'Network Scan'} in Progress`}</h3>
+                  <div className="target-info">{isK5 ? 'Looking at: ' : 'Target: '}{targetNetwork?.name}</div>
                 </div>
               </div>
-              
+
               <div className="scan-metrics">
                 <div className="metric">
                   <div className="metric-label">Progress</div>
                   <div className="metric-bar progress">
-                    <div 
-                      className="metric-fill" 
+                    <div
+                      className="metric-fill"
                       style={{ width: `${scanProgress}%` }}
                     ></div>
                   </div>
                   <div className="metric-value">{scanProgress.toFixed(1)}%</div>
                 </div>
-                
+
+                {!isK5 && (
                 <div className="metric">
                   <div className="metric-label">Detection Risk</div>
                   <div className="metric-bar detection">
-                    <div 
-                      className="metric-fill" 
-                      style={{ 
+                    <div
+                      className="metric-fill"
+                      style={{
                         width: `${detectionLevel}%`,
                         backgroundColor: detectionLevel > 70 ? '#ff4444' : detectionLevel > 40 ? '#ffaa00' : '#00ff88'
                       }}
@@ -907,8 +986,9 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                   </div>
                   <div className="metric-value">{detectionLevel}%</div>
                 </div>
-                
-                {timeRemaining !== null && (
+                )}
+
+                {!isK5 && timeRemaining !== null && (
                   <div className="metric">
                     <div className="metric-label">Time Remaining</div>
                     <div className="metric-value time">
@@ -920,6 +1000,7 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
             </div>
             
             <div className="scan-display">
+              {!isK5 && (
               <div className="current-phase">
                 <h4>Current Phase: {currentPhase || 'Initializing...'}</h4>
                 <div className="phase-description">
@@ -932,14 +1013,17 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                   {currentPhase === 'Covert Assessment' && 'Performing stealth vulnerability analysis...'}
                 </div>
               </div>
-              
+              )}
+
+              {!isK5 && (
               <div className="current-target">
                 <div className="target-label">Scanning:</div>
                 <div className="target-ip">{currentTarget || 'Initializing...'}</div>
               </div>
-              
+              )}
+
               <div className="live-results">
-                <h4>Devices Found: {devices.length}</h4>
+                <h4>{isK5 ? `Computers Found: ${devices.length}` : `Devices Found: ${devices.length}`}</h4>
                 {devices.length > 0 && (
                   <div className="device-preview">
                     {devices.slice(0, 3).map((device, index) => (
@@ -963,63 +1047,73 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
           <div className="results-interface">
             <div className="results-header">
               <div className={`result-status-large ${scanResults?.success ? 'success' : 'failure'}`}>
-                {scanResults?.success ? '✅ Scan Completed' : '❌ Scan Failed'}
+                {scanResults?.success ? (isK5 ? '✅ All Done!' : '✅ Scan Completed') : (isK5 ? '❌ Did Not Finish' : '❌ Scan Failed')}
               </div>
               {!scanResults?.success && (
-                <div className="result-reason">{scanResults?.reason}</div>
+                <div className="result-reason">{isK5 ? 'That took too long - let\'s try again!' : scanResults?.reason}</div>
               )}
             </div>
-            
+
             {scanResults?.success && scanResults.data && (
               <>
                 <div className="results-analysis">
-                  <h4>📊 Scan Analysis</h4>
+                  <h4>{isK5 ? '📊 What We Found' : '📊 Scan Analysis'}</h4>
                   <div className="analysis-grid">
                     <div className="analysis-item">
-                      <div className="analysis-label">Total Devices</div>
+                      <div className="analysis-label">{isK5 ? 'Computers Found' : 'Total Devices'}</div>
                       <div className="analysis-value">{scanResults.data.totalDevices}</div>
                     </div>
-                    <div className="analysis-item">
-                      <div className="analysis-label">Vulnerable Devices</div>
-                      <div className="analysis-value critical">{scanResults.data.vulnerableDevices}</div>
-                    </div>
-                    <div className="analysis-item">
-                      <div className="analysis-label">Open Ports</div>
-                      <div className="analysis-value">{scanResults.data.openPorts}</div>
-                    </div>
-                    <div className="analysis-item">
-                      <div className="analysis-label">Critical Vulnerabilities</div>
-                      <div className="analysis-value critical">{scanResults.data.criticalVulns}</div>
-                    </div>
+                    {!isK5 && (
+                      <>
+                        <div className="analysis-item">
+                          <div className="analysis-label">Vulnerable Devices</div>
+                          <div className="analysis-value critical">{scanResults.data.vulnerableDevices}</div>
+                        </div>
+                        <div className="analysis-item">
+                          <div className="analysis-label">Open Ports</div>
+                          <div className="analysis-value">{scanResults.data.openPorts}</div>
+                        </div>
+                        <div className="analysis-item">
+                          <div className="analysis-label">Critical Vulnerabilities</div>
+                          <div className="analysis-value critical">{scanResults.data.criticalVulns}</div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-                
+
                 <div className="devices-section">
-                  <h4>🔍 Discovered Devices</h4>
+                  <h4>{isK5 ? '🔍 Computers We Found' : '🔍 Discovered Devices'}</h4>
                   <div className="devices-grid">
                     {scanResults.devices?.map((device, index) => (
                       <div key={index} className="device-card">
                         <div className="device-header">
                           <div className="device-ip">{device.ip}</div>
-                          <div className={`device-risk ${device.riskLevel.toLowerCase()}`}>
-                            {device.riskLevel} Risk
-                          </div>
+                          {!isK5 && (
+                            <div className={`device-risk ${device.riskLevel.toLowerCase()}`}>
+                              {device.riskLevel} Risk
+                            </div>
+                          )}
                         </div>
                         <div className="device-details">
                           <div className="device-type">{device.type}</div>
-                          <div className="device-os">{device.os}</div>
-                          <div className="device-ports">
-                            Ports: {device.openPorts.join(', ')}
-                          </div>
-                          {device.vulnerabilities.length > 0 && (
-                            <div className="device-vulns">
-                              <strong>Vulnerabilities:</strong>
-                              <ul>
-                                {device.vulnerabilities.map((vuln, vIndex) => (
-                                  <li key={vIndex}>{vuln}</li>
-                                ))}
-                              </ul>
-                            </div>
+                          {!isK5 && (
+                            <>
+                              <div className="device-os">{device.os}</div>
+                              <div className="device-ports">
+                                Ports: {device.openPorts.join(', ')}
+                              </div>
+                              {device.vulnerabilities.length > 0 && (
+                                <div className="device-vulns">
+                                  <strong>Vulnerabilities:</strong>
+                                  <ul>
+                                    {device.vulnerabilities.map((vuln, vIndex) => (
+                                      <li key={vIndex}>{vuln}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -1028,19 +1122,19 @@ const NetworkScanner = ({ onComplete, onScanComplete, gameState, addOutput }) =>
                 </div>
               </>
             )}
-            
+
             <div className="results-actions">
-              <button 
+              <button
                 onClick={resetScan}
                 className="new-scan-btn"
               >
-                🔄 New Scan
+                {isK5 ? '🔄 Look Again' : '🔄 New Scan'}
               </button>
-              <button 
+              <button
                 onClick={() => onComplete && onComplete(scanResults)}
                 className="complete-btn"
               >
-                📋 Complete Mission
+                {isK5 ? '📋 All Done!' : '📋 Complete Mission'}
               </button>
             </div>
           </div>

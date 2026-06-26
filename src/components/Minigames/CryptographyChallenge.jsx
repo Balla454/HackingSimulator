@@ -1,6 +1,116 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
+// K-5: friendly "Solve the Code" challenges — no military/intelligence framing,
+// just fun secret messages decoded with two simple kid-named tools.
+const K5_CODE_CHALLENGES = [
+  {
+    id: 'k5_birthday',
+    icon: '🎂',
+    context: 'A secret birthday message from a friend',
+    ciphertext: 'KDSSB ELUWKGDB',
+    plaintext: 'HAPPY BIRTHDAY',
+    cipherType: 'caesar'
+  },
+  {
+    id: 'k5_hello',
+    icon: '👋',
+    context: 'A mixed-up greeting someone left for you',
+    ciphertext: 'SVOOL DLIOW',
+    plaintext: 'HELLO WORLD',
+    cipherType: 'atbash'
+  },
+  {
+    id: 'k5_treasure',
+    icon: '🗺️',
+    context: 'A treasure map clue to where to meet up',
+    ciphertext: 'RJJY FY YMJ UFWP',
+    plaintext: 'MEET AT THE PARK',
+    cipherType: 'caesar'
+  },
+  {
+    id: 'k5_detective',
+    icon: '🕵️',
+    context: 'A note slipped under your detective club door',
+    ciphertext: 'JRRG MRE GHWHFWLYH',
+    plaintext: 'GOOD JOB DETECTIVE',
+    cipherType: 'caesar'
+  },
+  {
+    id: 'k5_recess',
+    icon: '🎮',
+    context: 'A note passed during recess',
+    ciphertext: 'TLLW TZNV',
+    plaintext: 'GOOD GAME',
+    cipherType: 'atbash'
+  }
+];
+
+const shuffleCodes = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+const getCodeRank = (solved, total) => {
+  const pct = solved / total;
+  if (pct >= 0.99) return '🏆 Master Code Breaker!';
+  if (pct >= 0.5) return '🥈 Code Breaker';
+  return '🥉 Code Cadet — keep practicing!';
+};
+
+// Gentle hints explaining *why* a tool fits, instead of just "try again" — named after the real ciphers
+const K5_CIPHER_HINTS = {
+  caesar: '🔄 Tip: this looks like a Caesar Cipher — each letter slides forward in the alphabet by the same amount. Try Shift Code!',
+  atbash: '🪞 Tip: this looks like an Atbash Cipher — each letter swaps to its mirror opposite (A↔Z, B↔Y). Try Mirror Code!'
+};
+
 const CryptographyChallenge = ({ onCryptoComplete, addOutput, message, gameState }) => {
+  const ageTier = gameState?.ageTier || 'middle';
+  const isK5 = ageTier === 'k5';
+
+  // K-5 simplified state
+  const [k5Codes] = useState(() => shuffleCodes(K5_CODE_CHALLENGES));
+  const [k5Index, setK5Index] = useState(0);
+  const [k5Tries, setK5Tries] = useState(0);
+  const [k5Solved, setK5Solved] = useState(false);
+  const [k5Message, setK5Message] = useState('');
+  const [k5Done, setK5Done] = useState(false);
+  const [k5SolvedCount, setK5SolvedCount] = useState(0);
+  const [k5ByteLine, setK5ByteLine] = useState("Hi, Detective! I'm Byte 🕵️. Someone left an encrypted message — let's crack the cipher together!");
+
+  const k5Challenge = k5Codes[k5Index];
+
+  const k5TryTool = (toolType) => {
+    if (toolType === k5Challenge.cipherType) {
+      setK5Solved(true);
+      setK5SolvedCount(c => c + 1);
+      setK5Message(`🎉 You cracked it! The secret message is: "${k5Challenge.plaintext}"`);
+      setK5ByteLine(k5Tries === 0 ? 'Great decoding! 🎉 You\'re thinking like a real codebreaker.' : 'There it is! Mistakes are just part of cracking codes. 🌟');
+      addOutput && addOutput(`✅ Code solved: ${k5Challenge.plaintext}`);
+    } else {
+      setK5Tries(t => t + 1);
+      setK5Message(K5_CIPHER_HINTS[k5Challenge.cipherType] || "🤔 That tool didn't work this time — try the other one!");
+      setK5ByteLine("That's okay — not every guess works the first time. Here's a clue:");
+    }
+  };
+
+  const k5Next = () => {
+    if (k5Index + 1 >= k5Codes.length) {
+      setK5Done(true);
+      setTimeout(() => {
+        onCryptoComplete && onCryptoComplete(`✅ Solved ${k5SolvedCount} secret code(s)!`);
+      }, 1200);
+    } else {
+      setK5Index(i => i + 1);
+      setK5Solved(false);
+      setK5Message('');
+      setK5ByteLine('Next code — let\'s crack it! 🔍');
+    }
+  };
+
   const [currentStep, setCurrentStep] = useState('cipher_analysis');
   const [selectedCipher, setSelectedCipher] = useState('');
   const [decodedResult, setDecodedResult] = useState('');
@@ -414,13 +524,18 @@ const CryptographyChallenge = ({ onCryptoComplete, addOutput, message, gameState
   // Generate challenge on component mount
   useEffect(() => {
     if (!cryptoChallenge) {
-      // Select challenge based on game progression or difficulty
-      const availableChallenges = cipherChallenges.filter(c => 
-        !gameState?.completedCrypto?.includes(c.id)
+      // Age-tier cap: K-5 stays on Caesar-style shifts (difficulty 1-2),
+      // 6-8 goes up through Vigenere (difficulty <=3), 9-12 gets everything.
+      const ageTier = gameState?.ageTier || 'middle';
+      const maxDifficulty = ageTier === 'k5' ? 2 : ageTier === 'middle' ? 3 : 5;
+
+      // Select challenge based on game progression and age-tier difficulty cap
+      const availableChallenges = cipherChallenges.filter(c =>
+        !gameState?.completedCrypto?.includes(c.id) && c.difficulty <= maxDifficulty
       );
       const challenge = availableChallenges[0] || cipherChallenges[0];
       setCryptoChallenge(challenge);
-      
+
       // Perform initial analysis
       const analysis = analyzeCipher(challenge);
       setCipherAnalysis(analysis);
@@ -754,6 +869,68 @@ const CryptographyChallenge = ({ onCryptoComplete, addOutput, message, gameState
   const proceedToCipherSelection = () => {
     setCurrentStep('cipher_selection');
   };
+
+  if (isK5) {
+    return (
+      <div className="cryptography-challenge-enhanced tier-k5">
+        <h3 className="k5-crypto-title">🧩 Cryptography: Solve the Code</h3>
+        {k5Index === 0 && (
+          <>
+            <p className="k5-instructions">Someone left a secret message in code! Use the tools below to crack it. 🔍</p>
+            <div className="k5-tip">🧠 Cyber Term: <strong>Encryption</strong> is scrambling a message into a secret code — like a secret language only you and a friend know. <strong>Decrypting</strong> is unscrambling it back. That's how computers keep your passwords safe!</div>
+            <div className="k5-practice-banner">🎮 This is practice! It's totally okay to guess wrong — that's how we learn.</div>
+          </>
+        )}
+
+        <div className="k5-byte-row">
+          <div className="k5-byte-avatar">🕵️</div>
+          <div className="k5-byte-bubble">{k5ByteLine}</div>
+        </div>
+
+        {!k5Done ? (
+          <>
+            <div className="k5-email-card">
+              <div className="k5-email-row">{k5Challenge.icon} {k5Challenge.context}</div>
+              <div className="k5-email-body"><code>{k5Challenge.ciphertext}</code></div>
+            </div>
+
+            {!k5Solved ? (
+              <>
+                <div className="k5-answer-buttons">
+                  <button className="k5-safe-btn" onClick={() => k5TryTool('caesar')}>🔄 Try Shift Code (Caesar Cipher)</button>
+                  <button className="k5-trick-btn" onClick={() => k5TryTool('atbash')}>🪞 Try Mirror Code (Atbash Cipher)</button>
+                </div>
+                {k5Message && <div className="k5-feedback info"><div className="k5-feedback-title">💡 Hint from Detective Byte</div><div className="k5-feedback-why">{k5Message}</div></div>}
+                <div className="k5-progress">Tries so far: {k5Tries}</div>
+              </>
+            ) : (
+              <div className="k5-feedback success">
+                <div className="k5-feedback-title">🌟 Code Cracked!</div>
+                <div className="k5-feedback-why">{k5Message}</div>
+                <button className="k5-next-btn" onClick={k5Next}>
+                  {k5Index + 1 >= k5Codes.length ? 'Finish' : 'Next Code ➡️'}
+                </button>
+              </div>
+            )}
+
+            <div className="k5-progress">Code {k5Index + 1} of {k5Codes.length}</div>
+          </>
+        ) : (
+          <div className="k5-complete">
+            <div className="k5-byte-row">
+              <div className="k5-byte-avatar">🕵️</div>
+              <div className="k5-byte-bubble">You cracked every code you tried — nice work, Detective! 🎉</div>
+            </div>
+            <div className="k5-complete-title">🎉 Great job, Code Breaker!</div>
+            <div className="k5-complete-score">You solved {k5SolvedCount} of {k5Codes.length} secret codes!</div>
+            <div className="k5-complete-rank">{getCodeRank(k5SolvedCount, k5Codes.length)}</div>
+            <div className="k5-complete-tip">Codes help keep messages private — that's why grown-ups use them to protect passwords too.</div>
+            <div className="k5-learned">📋 What You Learned: This is called <strong>ENCRYPTION</strong> — scrambling a message into a secret code, like a secret language only you and a friend know. Cybersecurity helpers use it to keep information safe from strangers.</div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="cryptography-challenge-enhanced">

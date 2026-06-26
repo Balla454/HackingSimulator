@@ -13,8 +13,132 @@ import MalwareAnalyzer from './Minigames/MalwareAnalyzer';
 import SocialEngineering from './Minigames/SocialEngineering';
 import DigitalForensics from './Minigames/DigitalForensics';
 import { buildScoreCommand } from './DevModeOverlay';
+import {
+  AEGIS_TRAINING_SECTOR,
+  K5_PIXEL_LINES,
+  MIDDLE_PIXEL_LINES,
+  PIXEL,
+  getTierMeta
+} from '../data/aegisUniverse';
 
-const Terminal = () => {
+// Which tools each tier plays with. K-5 gets a trimmed "core concepts" set
+// (network awareness, password hygiene, phishing, encryption, file security,
+// forensics) so each one gets more attention instead of all 10. Middle/high
+// keep the full toolset for a more realistic, self-directed experience.
+const TIER_TOOL_SETS = {
+  k5: ['scan', 'crack', 'phish', 'crypto', 'decrypt', 'forensic'],
+  middle: ['scan', 'social', 'crack', 'ssh', 'phish', 'malware', 'firewall', 'crypto', 'decrypt', 'forensic'],
+  high: ['scan', 'social', 'crack', 'ssh', 'phish', 'malware', 'firewall', 'crypto', 'decrypt', 'forensic']
+};
+
+// K-5 left-nav modules — click-driven navigation instead of typed commands,
+// styled like a SOC dashboard's tool list. Order matches the unlock progression.
+const K5_NAV_ITEMS = [
+  { id: 'mission', icon: '🎯', label: 'Mission Control', cmd: 'mission' },
+  { id: 'scan', icon: '📡', label: 'Look Around', cmd: 'scan', toolKey: 'scan' },
+  { id: 'crack', icon: '🔓', label: 'Password Lab', cmd: 'crack', toolKey: 'crack' },
+  { id: 'phish', icon: '📥', label: 'Inbox Watch', cmd: 'phish', toolKey: 'phish' },
+  { id: 'crypto', icon: '🔐', label: 'Crypto Lab', cmd: 'crypto', toolKey: 'crypto' },
+  { id: 'decrypt', icon: '🔑', label: 'Vault', cmd: 'decrypt', toolKey: 'decrypt' },
+  { id: 'forensic', icon: '🕵️', label: 'Forensics Lab', cmd: 'forensic', toolKey: 'forensic' }
+];
+
+// Every K-5 tool belongs to exactly one step of the real incident-response
+// cycle. Password Lab + Inbox Watch open together as the "Contain" pair
+// (see checkAndUnlockTools), and Vault + Forensics Lab open together as
+// the "Recover" pair — so the nav sidebar can group them visually and the
+// cutscene system can tell which step the player is on just by looking at
+// which tool they're working toward next.
+const K5_TOOL_PHASE = {
+  scan: 'detect',
+  crack: 'contain',
+  phish: 'contain',
+  crypto: 'eradicate',
+  decrypt: 'recover',
+  forensic: 'recover'
+};
+
+// Kid-friendly framing of the real incident-response cycle
+// (Detect → Contain → Eradicate → Recover) shown as short cutscenes
+// whenever a K-5 player crosses into a new phase of the mission. Each
+// blurb calls back to the specific clue the player just turned up, so
+// the five tools read as one running case instead of five unrelated
+// mini-games.
+const K5_PHASE_INFO = {
+  detect: {
+    icon: '🔍',
+    eyebrow: 'Aegis Vault · Observe',
+    label: 'Detect',
+    blurb: PIXEL.teacher(K5_PIXEL_LINES.phaseDetect)
+  },
+  contain: {
+    icon: '🔐',
+    eyebrow: 'Aegis Vault · Contain',
+    label: 'Contain',
+    blurb: PIXEL.teacher(K5_PIXEL_LINES.phaseContain)
+  },
+  eradicate: {
+    icon: '🧹',
+    eyebrow: 'Aegis Vault · Eradicate',
+    label: 'Eradicate',
+    blurb: PIXEL.teacher(K5_PIXEL_LINES.phaseEradicate)
+  },
+  recover: {
+    icon: '🔓',
+    eyebrow: 'Aegis Vault · Recover',
+    label: 'Recover',
+    blurb: PIXEL.teacher(K5_PIXEL_LINES.phaseRecover)
+  },
+  case_closed: {
+    icon: '🏆',
+    eyebrow: 'Aegis Vault · Complete',
+    label: 'Case Closed',
+    blurb: PIXEL.teacher(K5_PIXEL_LINES.caseClosed)
+  }
+};
+
+// Section headers for the phase-grouped K-5 nav sidebar.
+const K5_PHASE_LABELS = {
+  detect: '🔍 Detect',
+  contain: '🔐 Contain',
+  eradicate: '🧹 Eradicate',
+  recover: '🔓 Recover'
+};
+
+// Plain-language unlock requirement shown on locked K-5 nav items so kids
+// understand WHY something is locked instead of just seeing a 🔒.
+const K5_UNLOCK_HINT = {
+  crack: 'Unlocks after Look Around',
+  phish: 'Unlocks after Look Around',
+  crypto: 'Unlocks after Password Lab + Inbox Watch',
+  decrypt: 'Unlocks after Crypto Lab',
+  forensic: 'Unlocks after Crypto Lab'
+};
+
+// One-line case-file recap shown at the top of each K-5 minigame popup so
+// the tool reads as the next beat in one running case, not a standalone
+// arcade game. Mirrors the same story used in the activity-log unlock
+// messages in checkAndUnlockTools.
+const K5_CASE_FILE_INTRO = {
+  scan: `📋 Case file: ${AEGIS_TRAINING_SECTOR}'s network went quiet tonight — let's see who's still connected.`,
+  crack: '📋 Case file: A dormant account just logged in. Was its password weak?',
+  phish: '📋 Case file: A strange email arrived at the same time — not all messages are what they seem.',
+  crypto: '📋 Case file: Account locked down. A scrambled note in the logs — every click leaves a trace.',
+  decrypt: '📋 Case file: They wanted the customer vault. Open it safely.',
+  forensic: '📋 Case file: Vault secured. Sweep the quiet device from your first scan for anything left behind.'
+};
+
+const buildInitialToolAccess = (tier) => {
+  const tools = TIER_TOOL_SETS[tier] || TIER_TOOL_SETS.middle;
+  const access = {};
+  tools.forEach(t => { access[t] = false; });
+  access.scan = true;
+  if (tools.includes('social')) access.social = true;
+  return access;
+};
+
+const Terminal = ({ ageTier = 'middle' }) => {
+  const activeTools = useMemo(() => TIER_TOOL_SETS[ageTier] || TIER_TOOL_SETS.middle, [ageTier]);
   const [output, setOutput] = useState([]);
   const [activeGame, setActiveGame] = useState(null);
   const [showMissionBriefing] = useState(true);
@@ -24,11 +148,50 @@ const Terminal = () => {
   const inputRef = useRef(null);
   const outputRef = useRef(null);
 
+  // K-5: shows a bouncing "scroll for more" cue at the bottom of a minigame
+  // popup, but only while there's actually more content below the fold —
+  // hides itself once the player has scrolled (close to) the bottom.
+  const k5MinigameContentRef = useRef(null);
+  const [k5ShowScrollHint, setK5ShowScrollHint] = useState(false);
+
+  useEffect(() => {
+    if (ageTier !== 'k5' || !activeGame) {
+      setK5ShowScrollHint(false);
+      return;
+    }
+    const el = k5MinigameContentRef.current;
+    if (!el) return;
+
+    const checkOverflow = () => {
+      const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 24;
+      setK5ShowScrollHint(hasMore);
+    };
+
+    // Layout settles a tick after the minigame mounts, changes step, or the
+    // player clicks something inside it (selecting a card, revealing a
+    // result, etc. can all change how much content there is).
+    const t = setTimeout(checkOverflow, 150);
+    const onInteract = () => setTimeout(checkOverflow, 150);
+    el.addEventListener('scroll', checkOverflow);
+    el.addEventListener('click', onInteract);
+    window.addEventListener('resize', checkOverflow);
+    return () => {
+      clearTimeout(t);
+      el.removeEventListener('scroll', checkOverflow);
+      el.removeEventListener('click', onInteract);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [ageTier, activeGame]);
+
   const [storyProgress, setStoryProgress] = useState({
     phase: 'initial',
     completedMinigames: [],
-    currentObjective: 'Begin silent reconnaissance of TechCorp infrastructure',
-    nextSteps: ['Use stealth network scanner to map target network without detection'],
+    currentObjective: ageTier === 'k5'
+      ? 'Start exploring TechCorp\'s network'
+      : 'Begin silent reconnaissance of TechCorp infrastructure',
+    nextSteps: [ageTier === 'k5'
+      ? 'Use the network scanner to map TechCorp\'s network'
+      : 'Use stealth network scanner to map target network without detection'],
     intelligence: {
       networkDevices: [],
       employeeData: [],
@@ -37,7 +200,27 @@ const Terminal = () => {
     }
   });
   
+  // Failure-condition presets keyed by age tier (k5 = most forgiving, high = realistic/strict)
+  const tierFailurePresets = {
+    k5: {
+      maxDetectionLevel: 98, maxFailedAttempts: 12, maxSecurityAlerts: 12,
+      timeLimit: 5400000, maxCommandsPerMinute: 40, maxHoneypotHits: 4,
+      maxCredentialLockouts: 5, maxNoiseLevel: 100, maxSuspicionScore: 200, maxForensicTrail: 80
+    },
+    middle: {
+      maxDetectionLevel: 85, maxFailedAttempts: 5, maxSecurityAlerts: 5,
+      timeLimit: 3600000, maxCommandsPerMinute: 25, maxHoneypotHits: 2,
+      maxCredentialLockouts: 3, maxNoiseLevel: 75, maxSuspicionScore: 120, maxForensicTrail: 40
+    },
+    high: {
+      maxDetectionLevel: 70, maxFailedAttempts: 3, maxSecurityAlerts: 3,
+      timeLimit: 2700000, maxCommandsPerMinute: 15, maxHoneypotHits: 1,
+      maxCredentialLockouts: 2, maxNoiseLevel: 50, maxSuspicionScore: 80, maxForensicTrail: 25
+    }
+  };
+
   const [gameState, setGameState] = useState(() => ({
+    ageTier,
     completedMinigames: [],
     completedTools: [],
     unlockedTools: ['scan'],
@@ -77,9 +260,13 @@ const Terminal = () => {
     },
     story: {
       phase: 'reconnaissance',
-      currentObjective: 'Begin network reconnaissance to identify entry points',
+      currentObjective: ageTier === 'k5'
+        ? 'Begin scanning TechCorp\'s network to find the intruder\'s tracks'
+        : 'Begin network reconnaissance to identify entry points',
       missionBriefingShown: false,
-      context: 'You are an ethical hacker conducting a penetration test on TechCorp Industries.'
+      context: ageTier === 'k5'
+        ? 'You are a Cyber Cadet helping TechCorp Industries test and defend their network.'
+        : 'You are a contracted operative running an unauthorized infiltration of TechCorp Industries.'
     },
     network: {
       discoveredHosts: [],
@@ -107,18 +294,7 @@ const Terminal = () => {
       escalationPaths: [],
       advancedPersistence: []
     },
-    toolAccess: {
-      scan: true,       // Always available
-      social: true,     // Always available - human factor
-      crack: false,     // Unlocked after network scan
-      ssh: false,       // Unlocked after scanning + cracking
-      phish: false,     // Unlocked after social engineering
-      malware: false,   // Unlocked after SSH access
-      firewall: false,  // Unlocked after social + network knowledge
-      crypto: false,    // Unlocked after malware or firewall
-      decrypt: false,   // Unlocked after crypto analysis
-      forensic: false   // Unlocked after SSH access
-    },
+    toolAccess: buildInitialToolAccess(ageTier),
     detectionLevel: 0,
     sshDetectionLevel: 0,
     sessionRisk: 0,
@@ -132,17 +308,8 @@ const Terminal = () => {
       suspiciousActivities: []
     },
     failureConditions: {
-      maxDetectionLevel: 85,     // Increased from 75% - more forgiving
-      maxFailedAttempts: 5,      // Increased from 3 - more attempts allowed
-      maxSecurityAlerts: 5,      // Increased from 3 - more alerts before failure
-      timeLimit: 3600000,        // Increased to 60 minutes - more time
       criticalFailures: 0,       // Instant failure events
-      maxCommandsPerMinute: 25,  // Increased from 15 - faster typing allowed
-      maxHoneypotHits: 2,        // Increased from 1 - more honeypot tolerance
-      maxCredentialLockouts: 3,  // Increased from 2 - more lockout tolerance
-      maxNoiseLevel: 75,         // Increased from 50 - more network activity allowed
-      maxSuspicionScore: 120,    // Increased from 80 - higher behavioral threshold
-      maxForensicTrail: 40       // Increased from 25 - more evidence tolerance
+      ...(tierFailurePresets[ageTier] || tierFailurePresets.middle)
     },
     failedAttempts: {
       ssh: 0,
@@ -417,86 +584,201 @@ const Terminal = () => {
     }
   };
 
-  // Story progression and narrative framework
-  const missionStory = {
-    title: "Operation: Shadow Strike",
-    target: "TechCorp Industries",
-    briefing: `
+  // Story progression and narrative framework, tiered by audience age.
+  // K-5 gets a white-hat "help the company" framing with no crime/theft language.
+  // 6-8 and 9-12 keep the classic covert-operative framing, but the writing has
+  // been tightened so the objective at each phase is unambiguous.
+  const missionStoryVariants = {
+    k5: {
+      title: "Aegis Vault — Network Defender",
+      target: AEGIS_TRAINING_SECTOR,
+      briefing: `
+🛡️ AEGIS VAULT — EXPLORER WING
+
+${PIXEL.teacher(K5_PIXEL_LINES.introOpen)}
+
+Training sector: ${AEGIS_TRAINING_SECTOR} (simulated company network)
+
+👉 Click a module on the left to start!
+💡 Stuck? Ask PIXEL for a hint anytime.
+    `,
+      // Keyed by the legacy phase ids (reconnaissance/initial_access/etc) so
+      // getCurrentPhase() and the "mission"/"status" commands keep working,
+      // but the content now matches the real Detect/Contain/Eradicate/Recover
+      // grouping used by the nav sidebar and cutscenes: Contain pairs
+      // Password Lab + Inbox Watch, Eradicate is Crypto Lab alone, and
+      // Recover pairs Vault + Forensics Lab.
+      phases: {
+        reconnaissance: {
+          title: "Phase 1: Detect",
+          description: `Look around ${AEGIS_TRAINING_SECTOR}'s network and find what's connected`,
+          objectives: ["Scan the network for devices", "Spot anything that looks unusual", "Make a map of what you find"],
+          tools: ["Network Scanner"],
+          narrative: "Devices are always talking to each other. Use the scanner to see the network — like learning how a conversation sounds before you spot the odd word."
+        },
+        initial_access: {
+          title: "Phase 2: Contain",
+          description: "A dormant account just logged in — chase both leads",
+          objectives: ["Try cracking a weak password", "Practice spotting a phishing email"],
+          tools: ["Password Cracker", "Phishing Simulator"],
+          narrative: "Not all messages are what they seem. Test weak passwords and phishing the way real defenders train — so the company can fix gaps before trouble spreads."
+        },
+        post_exploitation: {
+          title: "Phase 3: Eradicate",
+          description: "Crack the scrambled note left behind in the logs",
+          objectives: ["Break a secret code"],
+          tools: ["Cryptography Challenge"],
+          narrative: "Every click leaves a trace. This puzzle teaches the same code-breaking skill security experts use every day."
+        },
+        data_acquisition: {
+          title: "Phase 4: Recover",
+          description: "Unlock the customer vault, then sweep for anything else they touched",
+          objectives: ["Use your key to unlock a file", "Collect digital clues", "Finish your investigation"],
+          tools: ["File Decryptor", "Digital Forensics"],
+          narrative: "Almost done — recover the locked files and gather the last clues for your Aegis report."
+        },
+        mission_complete: {
+          title: "Case Closed",
+          description: `You helped ${AEGIS_TRAINING_SECTOR} find and fix their weak spots`,
+          narrative: `Great work, Explorer! ${PIXEL.teacher('You earned the Digital Awareness Badge — you learned to see what the digital world is saying.')}`
+        }
+      }
+    },
+    middle: {
+      title: "Aegis Vault — Shadow Strike Simulation",
+      target: AEGIS_TRAINING_SECTOR,
+      briefing: `
+🔬 AEGIS VAULT — ANALYST WING
+
+${PIXEL.mentor(MIDDLE_PIXEL_LINES.labOpen)}
+
+Simulated target: ${AEGIS_TRAINING_SECTOR}
+Exercise type: Adversary simulation (red-team training for blue-team thinking)
+Detection risk: HIGH — getting caught ends the run
+
+THE SITUATION:
+This lab simulates how attackers move through a network so you can learn to recognize patterns, connect events, and ask "what caused this?" before you act.
+
+YOUR OBJECTIVES, IN ORDER:
+1. 🔍 RECON: Scan the network and map devices and weaknesses
+2. 🔑 BREACH: Crack passwords and log in to get a foothold
+3. ⚡ ESCALATE: Move deeper without raising alarms
+4. 💎 EXTRACT: Decrypt files and gather evidence
+5. 🕵️ STAY HIDDEN: Keep detection low the entire time
+
+${PIXEL.mentor(MIDDLE_PIXEL_LINES.briefingFooter)}
+
+Type "mission" any time to see your current objective and progress.
+    `,
+      phases: {
+        reconnaissance: {
+          title: "Phase 1: Reconnaissance",
+          description: "Map TechCorp's network without tripping any alarms",
+          objectives: ["Scan the network perimeter", "Identify vulnerable services", "Map the attack surface"],
+          tools: ["Network Scanner"],
+          narrative: "Every infiltration starts with intel. Learn TechCorp's network layout while staying off their radar."
+        },
+        initial_access: {
+          title: "Phase 2: Breach & Access",
+          description: "Get into the network without being detected",
+          objectives: ["Exploit a discovered vulnerability", "Crack authentication credentials", "Use social engineering for access"],
+          tools: ["Password Cracker", "SSH Login", "Social Engineering", "Phishing Simulator"],
+          narrative: "Time to get inside TechCorp's defenses. Pick your approach carefully - one mistake can trigger their security team."
+        },
+        post_exploitation: {
+          title: "Phase 3: Move Through the Network",
+          description: "Expand access while staying under the radar",
+          objectives: ["Escalate access without detection", "Move through connected systems", "Get past security controls"],
+          tools: ["Malware Analyzer", "Firewall Breach", "Cryptography Challenge"],
+          narrative: "You're inside now, but you're not safe yet. Navigate their security controls carefully."
+        },
+        data_acquisition: {
+          title: "Phase 4: Extract the Data",
+          description: "Get the valuable data out and clean up after yourself",
+          objectives: ["Find the high-value targets", "Decrypt the secured files", "Gather your evidence quietly"],
+          tools: ["File Decryptor", "Digital Forensics"],
+          narrative: "The prize is close. Extracting it cleanly, without leaving evidence behind, takes real skill."
+        },
+        mission_complete: {
+          title: "Lab Exercise Complete",
+          description: "Adversary simulation successful — patterns logged for review",
+          narrative: `${PIXEL.mentor('You connected the events and built an explanation. Junior Cyber Analyst Badge earned — same world, deeper thinking.')}`
+        }
+      }
+    },
+    high: {
+      title: "Operation: Shadow Strike",
+      target: "TechCorp Industries",
+      briefing: `
 🏴‍☠️ CLASSIFIED - UNAUTHORIZED ACCESS OPERATION
 
 Target: TechCorp Industries
-Operation Type: Covert Digital Infiltration  
-Time Window: Limited (48 hours before security audit)
-Detection Risk: CRITICAL - Zero tolerance for exposure
+Operation Type: Covert Digital Infiltration
+Time Window: Limited (48 hours before a scheduled security audit)
+Detection Risk: CRITICAL - zero tolerance for exposure
 
 SITUATION:
-TechCorp Industries has valuable financial data and trade secrets worth millions. Recent intelligence suggests they're developing revolutionary fintech algorithms that could be extremely profitable on the black market. Their security team is competent but not expecting an attack.
+TechCorp Industries is developing fintech algorithms worth millions. Their security team is competent but isn't expecting an attack this week. You have a narrow window before that changes.
 
-Your reputation as a ghost in the machine depends on completing this operation without leaving any traces. One mistake could expose your identity and land you in federal prison.
+OBJECTIVES, IN ORDER:
+1. 🔍 RECON: Map the network and enumerate services without triggering alerts
+2. 🔑 BREACH: Exploit weak credentials and authentication to gain a foothold
+3. ⚡ ESCALATE: Move laterally and elevate privileges while staying invisible
+4. 💎 EXTRACT: Locate, decrypt, and exfiltrate the target data
+5. 🕵️ COVER TRACKS: Erase your forensic footprint before logging off
 
-OBJECTIVES:
-1. 🔍 INFILTRATE: Gain entry to TechCorp's network without triggering alerts
-2. ⚡ ESCALATE: Obtain administrative privileges while staying invisible  
-3. 💎 EXFILTRATE: Locate and steal high-value financial algorithms and customer data
-4. 🕵️ COVER TRACKS: Remove all evidence of your presence
-5. 💰 PROFIT: Sell obtained data on dark web markets
+OPERATIONAL CONSTRAINTS:
+- Every action contributes to a detection score - there is no risk-free move
+- Security alerts escalate in tiers; reaching the top tier ends the mission
+- Honeypots, credential lockouts, and command-frequency spikes are all tracked
+- Type "mission" at any time to check your current objective and risk level
 
-OPERATIONAL SECURITY:
-- Maintain complete anonymity - your identity must never be discovered
-- Avoid detection systems - triggering alerts will compromise the operation
-- Use advanced evasion techniques - their SOC team monitors for suspicious activity
-- Leave no digital footprints - forensic analysis must find nothing
-
-⚠️ CONSEQUENCES OF DETECTION:
-- Immediate operation termination
-- Potential law enforcement involvement  
-- Permanent ban from elite hacker circles
-- Financial ruin and imprisonment
-
-Remember: You don't exist. You were never here. Leave no trace.
-
-Good luck, shadow.
+This is a cybersecurity training simulation - every tool here maps to a real-world technique, and the stakes are designed to feel real even though the target is fictional.
     `,
-    phases: {
-      reconnaissance: {
-        title: "Phase 1: Silent Reconnaissance",
-        description: "Map target infrastructure without alerting security",
-        objectives: ["Quietly probe network perimeter", "Identify vulnerable services", "Map attack surface anonymously"],
-        tools: ["Stealth Network Scanner", "Service Enumeration", "Vulnerability Assessment"],
-        narrative: "Every successful infiltration begins with intelligence gathering. You must learn TechCorp's digital layout while remaining completely invisible to their monitoring systems."
-      },
-      initial_access: {
-        title: "Phase 2: Breach & Infiltrate", 
-        description: "Gain unauthorized access without detection",
-        objectives: ["Exploit discovered vulnerabilities", "Crack authentication silently", "Manipulate employees for access"],
-        tools: ["Password Cracker", "SSH Infiltration", "Social Engineering", "Spear Phishing"],
-        narrative: "Time to slip through TechCorp's defenses. Choose your attack vector carefully - a single misstep could trigger their incident response team."
-      },
-      post_exploitation: {
-        title: "Phase 3: Shadow Operations",
-        description: "Expand control while evading detection", 
-        objectives: ["Escalate privileges stealthily", "Move laterally through network", "Bypass security controls"],
-        tools: ["Malware Deployment", "Firewall Evasion", "Cryptographic Attacks"],
-        narrative: "You're inside their network but far from safe. Advanced persistent threat techniques are needed to navigate their security controls without raising suspicion."
-      },
-      data_acquisition: {
-        title: "Phase 4: Digital Heist",
-        description: "Steal valuable data and cover your tracks",
-        objectives: ["Locate high-value targets", "Decrypt secured databases", "Exfiltrate data silently"],
-        tools: ["File Decryption", "Digital Forensics", "Data Exfiltration"],
-        narrative: "The prize is within reach. TechCorp's most valuable secrets await, but extracting them without detection requires master-level skills."
-      },
-      mission_complete: {
-        title: "Operation Complete",
-        description: "Successfully infiltrated and exfiltrated - identity unknown",
-        narrative: "Another ghost job completed. TechCorp will never know what hit them, and you've secured your reputation as an elite cyber criminal."
+      phases: {
+        reconnaissance: {
+          title: "Phase 1: Silent Reconnaissance",
+          description: "Map target infrastructure without alerting security",
+          objectives: ["Probe the network perimeter", "Identify vulnerable services", "Map the attack surface anonymously"],
+          tools: ["Network Scanner"],
+          narrative: "Every successful infiltration starts with intelligence gathering. Learn TechCorp's digital layout while staying invisible to monitoring systems."
+        },
+        initial_access: {
+          title: "Phase 2: Breach & Infiltrate",
+          description: "Gain unauthorized access without detection",
+          objectives: ["Exploit discovered vulnerabilities", "Crack authentication silently", "Use social engineering for access"],
+          tools: ["Password Cracker", "SSH Login", "Social Engineering", "Phishing Simulator"],
+          narrative: "Time to slip through TechCorp's defenses. Choose your attack vector carefully - a single misstep triggers their incident response team."
+        },
+        post_exploitation: {
+          title: "Phase 3: Shadow Operations",
+          description: "Expand control while evading detection",
+          objectives: ["Escalate privileges stealthily", "Move laterally through the network", "Bypass security controls"],
+          tools: ["Malware Analyzer", "Firewall Breach", "Cryptography Challenge"],
+          narrative: "You're inside their network but far from safe. Advanced persistent-threat techniques are needed to navigate their security controls undetected."
+        },
+        data_acquisition: {
+          title: "Phase 4: Data Extraction",
+          description: "Locate, decrypt, and extract the target data, then cover your tracks",
+          objectives: ["Locate high-value targets", "Decrypt secured databases", "Exfiltrate data silently"],
+          tools: ["File Decryptor", "Digital Forensics"],
+          narrative: "The prize is within reach. Extracting TechCorp's most valuable data without detection requires master-level skill."
+        },
+        mission_complete: {
+          title: "Operation Complete",
+          description: "Infiltration and exfiltration successful - identity unknown",
+          narrative: "Operation complete. You got in, got the data, and got out without a trace - elite-level execution."
+        }
       }
     }
   };
 
+  const missionStory = missionStoryVariants[ageTier] || missionStoryVariants.middle;
+
   // Add output utility function early
   const addOutput = (text, type = 'output') => {
-    setOutput(prev => [...prev, { text, type }]);
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setOutput(prev => [...prev, { text, type, time }]);
   };
 
   // Add auto-scroll effect
@@ -506,9 +788,70 @@ Good luck, shadow.
     }
   }, [output]);
 
+  // --- Cyber HQ live feed (K-5 sidebar) ---------------------------------
+  // Mirrors real terminal events plus occasional harmless "ambient" scan
+  // lines, so the status panel feels alive even between player actions.
+  const [hqFeed, setHqFeed] = useState([]);
+  const [hqScanning, setHqScanning] = useState(false);
+  const prevOutputLenRef = useRef(0);
+
+  useEffect(() => {
+    if (ageTier !== 'k5') return;
+    if (output.length > prevOutputLenRef.current) {
+      const newItems = output.slice(prevOutputLenRef.current);
+      setHqFeed(prev => [...prev, ...newItems].slice(-30));
+    }
+    prevOutputLenRef.current = output.length;
+  }, [output, ageTier]);
+
+  const HQ_AMBIENT_LINES = [
+    { text: '🛰️ Network scan: all clear', type: 'success' },
+    { text: '🔍 Checking inbox for phishing patterns... none found', type: 'system' },
+    { text: '🔐 Encryption check passed', type: 'success' },
+    { text: '📡 Monitoring for suspicious activity...', type: 'system' },
+    { text: '🛡️ Firewall status: active', type: 'success' },
+    { text: '🧰 Security tools running normally', type: 'system' }
+  ];
+
+  const hqRunScan = () => {
+    setHqScanning(true);
+    setTimeout(() => {
+      const line = HQ_AMBIENT_LINES[Math.floor(Math.random() * HQ_AMBIENT_LINES.length)];
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setHqFeed(prev => [...prev, { ...line, time, ambient: true }].slice(-30));
+      setHqScanning(false);
+    }, 900);
+  };
+
+  useEffect(() => {
+    if (ageTier !== 'k5') return;
+    const interval = setInterval(() => {
+      const line = HQ_AMBIENT_LINES[Math.floor(Math.random() * HQ_AMBIENT_LINES.length)];
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setHqFeed(prev => [...prev, { ...line, time, ambient: true }].slice(-30));
+    }, 14000);
+    return () => clearInterval(interval);
+  }, [ageTier]);
+
   // Add missing utility functions
   const getCurrentPhase = () => {
     const completedCount = gameState.completedMinigames?.length || 0;
+    if (ageTier === 'k5') {
+      // Mirrors the same next-pending-tool logic as the nav sidebar/cutscenes
+      // (K5_TOOL_PHASE), translated to the legacy phase ids that
+      // missionStory.phases/getStoryContext still key off of.
+      const completed = gameState.completedMinigames || [];
+      const nextTool = K5_NAV_ITEMS.find(item => item.toolKey && !completed.includes(item.toolKey));
+      const phase = nextTool ? K5_TOOL_PHASE[nextTool.toolKey] : 'case_closed';
+      const legacyKey = {
+        detect: 'reconnaissance',
+        contain: 'initial_access',
+        eradicate: 'post_exploitation',
+        recover: 'data_acquisition',
+        case_closed: 'mission_complete'
+      };
+      return legacyKey[phase];
+    }
     if (completedCount === 0) return 'reconnaissance';
     if (completedCount <= 3) return 'initial_access';
     if (completedCount <= 7) return 'post_exploitation';
@@ -571,6 +914,28 @@ Good luck, shadow.
       phase: getCurrentPhase()
     }));
 
+    // K-5: a phase is "complete" (not just a tool) once both tools that
+    // belong to it are done. That's a bigger beat than finishing a single
+    // tool, so it gets its own distinct celebratory line.
+    if (ageTier === 'k5' && K5_TOOL_PHASE[toolName]) {
+      const phase = K5_TOOL_PHASE[toolName];
+      const phaseTools = K5_NAV_ITEMS.filter(i => i.toolKey && K5_TOOL_PHASE[i.toolKey] === phase).map(i => i.toolKey);
+      const completedSoFar = [...(gameState.completedMinigames || []), toolName];
+      const phaseJustCompleted = phaseTools.every(t => completedSoFar.includes(t));
+      if (phaseJustCompleted) {
+        addOutput(`\n🎉 PHASE COMPLETE: ${K5_PHASE_LABELS[phase]}! Nice work, Cadet.`, 'success');
+      } else if (phaseTools.length > 1) {
+        // Paired phase (Contain or Recover) and only one of the two tools is
+        // done so far - give a quick Coach Byte nudge toward the other one,
+        // rather than making the kid hunt for it via the Hint button.
+        const remainingTool = phaseTools.find(t => !completedSoFar.includes(t));
+        if (remainingTool) {
+          const remainingItem = K5_NAV_ITEMS.find(i => i.toolKey === remainingTool);
+          addOutput(`\n${PIXEL.teacher(K5_PIXEL_LINES.toolNudge(K5_PHASE_LABELS[phase], remainingItem?.label || remainingTool))}`, 'system');
+        }
+      }
+    }
+
     // Check for achievements
     checkAchievements(gameState, [...gameState.completedMinigames, toolName]);
 
@@ -582,33 +947,55 @@ Good luck, shadow.
       const completedCount = gameState.completedMinigames.length + 1; // +1 for the tool just completed
       
       // Milestone encouragement and guidance
-      if (completedCount === 1) {
-        const encouragement = guidanceSystem.mentor.responses.encouragement;
-        addOutput(`\n👤 Ghost: ${encouragement[Math.floor(Math.random() * encouragement.length)]}`, 'system');
-        addOutput('💡 Ghost: You\'ve taken your first step into the shadow world. Keep going!', 'system');
-      } else if (completedCount === 3) {
-        addOutput('\n👤 Ghost: Impressive. You\'re no longer a script kiddie. Ready for advanced techniques?', 'system');
-        addOutput('💡 Type "hint" anytime you need guidance on your next move.', 'system');
-      } else if (completedCount === 5) {
-        addOutput('\n👤 Ghost: Half way there, shadow. Your skills are developing nicely.', 'system');
-        addOutput('🎯 Elite hackers combine multiple attack vectors. Think strategically.', 'system');
-      } else if (completedCount === 7) {
-        addOutput('\n👤 Ghost: Outstanding progress. You\'re approaching master-level capabilities.', 'system');
-        addOutput('🔐 The final challenges require true expertise. Are you ready?', 'system');
-      } else if (completedCount === 10) {
-        addOutput('\n👤 Ghost: Welcome to the elite, shadow. You\'ve mastered the digital realm.', 'system');
-        addOutput('👑 Legendary status achieved. The underground recognizes your skills.', 'system');
-      }
-      
-      // Contextual next step hint
-      if (completedCount < 10) {
-        const nextHint = guidanceSystem.getContextualHint({
-          ...gameState,
-          completedMinigames: [...gameState.completedMinigames, toolName]
-        });
-        
-        if (nextHint.priority === 'high' || nextHint.priority === 'critical') {
-          addOutput(`\n💡 Next objective: ${nextHint.message}`, 'system');
+      if (ageTier === 'k5') {
+        const totalK5 = TIER_TOOL_SETS.k5.length; // 6
+        const halfway = Math.ceil(totalK5 / 2); // 3
+        if (completedCount === 1) {
+          addOutput(`\n${PIXEL.teacher(K5_PIXEL_LINES.encouragement[0])}`, 'system');
+        } else if (completedCount === halfway) {
+          addOutput(`\n${PIXEL.teacher(K5_PIXEL_LINES.encouragement[1])}`, 'system');
+        } else if (completedCount === totalK5 - 1) {
+          addOutput(`\n${PIXEL.teacher(K5_PIXEL_LINES.encouragement[2])}`, 'system');
+        } else if (completedCount === totalK5) {
+          addOutput(`\n${PIXEL.teacher(K5_PIXEL_LINES.encouragement[3])}`, 'system');
+        }
+
+        if (completedCount < totalK5) {
+          const nextHint = coachByte.getHint({
+            ...gameState,
+            completedMinigames: [...gameState.completedMinigames, toolName]
+          });
+          addOutput(`\n💡 Next step: ${nextHint.message}`, 'system');
+        }
+      } else {
+        if (completedCount === 1) {
+          const encouragement = guidanceSystem.mentor.responses.encouragement;
+          addOutput(`\n👤 Ghost: ${encouragement[Math.floor(Math.random() * encouragement.length)]}`, 'system');
+          addOutput('💡 Ghost: You\'ve taken your first step into the shadow world. Keep going!', 'system');
+        } else if (completedCount === 3) {
+          addOutput('\n👤 Ghost: Impressive. You\'re no longer a script kiddie. Ready for advanced techniques?', 'system');
+          addOutput('💡 Type "hint" anytime you need guidance on your next move.', 'system');
+        } else if (completedCount === 5) {
+          addOutput('\n👤 Ghost: Half way there, shadow. Your skills are developing nicely.', 'system');
+          addOutput('🎯 Elite hackers combine multiple attack vectors. Think strategically.', 'system');
+        } else if (completedCount === 7) {
+          addOutput('\n👤 Ghost: Outstanding progress. You\'re approaching master-level capabilities.', 'system');
+          addOutput('🔐 The final challenges require true expertise. Are you ready?', 'system');
+        } else if (completedCount === 10) {
+          addOutput('\n👤 Ghost: Welcome to the elite, shadow. You\'ve mastered the digital realm.', 'system');
+          addOutput('👑 Legendary status achieved. The underground recognizes your skills.', 'system');
+        }
+
+        // Contextual next step hint
+        if (completedCount < 10) {
+          const nextHint = guidanceSystem.getContextualHint({
+            ...gameState,
+            completedMinigames: [...gameState.completedMinigames, toolName]
+          });
+
+          if (nextHint.priority === 'high' || nextHint.priority === 'critical') {
+            addOutput(`\n💡 Next objective: ${nextHint.message}`, 'system');
+          }
         }
       }
     }, 2000); // Delay to let completion messages show first
@@ -616,6 +1003,66 @@ Good luck, shadow.
 
   // Function to check conditions and unlock tools
   const checkAndUnlockTools = () => {
+    if (ageTier === 'k5') {
+      // K-5 plays a short, guided chain grouped into incident-response
+      // phases: Detect (scan) -> Contain (crack + phish open together) ->
+      // Eradicate (crypto, needs BOTH Contain tools done) -> Recover
+      // (decrypt + forensic open together). Order is locked between
+      // phases, but the two tools inside a phase unlock as a pair so kids
+      // can tackle either one first.
+      setGameState(prev => {
+        const newToolAccess = { ...prev.toolAccess };
+        let hasChanges = false;
+
+        if ((!newToolAccess.crack || !newToolAccess.phish) && prev.scannedDevices.length > 0) {
+          let pairChanged = false;
+          if (!newToolAccess.crack) {
+            newToolAccess.crack = true;
+            pairChanged = true;
+          }
+          if (!newToolAccess.phish) {
+            newToolAccess.phish = true;
+            pairChanged = true;
+          }
+          if (pairChanged) {
+            hasChanges = true;
+            addOutput('📋 Case file: A dormant account just logged in out of nowhere. Two leads to chase down —', 'system');
+            addOutput('🔓 NEW SKILL UNLOCKED: 🔑 Guess the Password - Try cracking weak passwords to protect accounts!', 'success');
+            addOutput('🔓 NEW SKILL UNLOCKED: 🎣 Spot the Trick Email - Learn to recognize fake emails and protect users!', 'success');
+          }
+        }
+        if (!newToolAccess.crypto && prev.crackedPasswords.length > 0 && prev.phishingData.length > 0) {
+          newToolAccess.crypto = true;
+          hasChanges = true;
+          addOutput('📋 Case file: Both leads checked out — the account\'s locked down. A scrambled note turned up in the logs.', 'system');
+          addOutput('🔓 NEW SKILL UNLOCKED: 🔐 Solve the Code - Break secret codes to understand how secrets are protected!', 'success');
+        }
+        if ((!newToolAccess.decrypt || !newToolAccess.forensic) && prev.cryptoKeys.length > 0) {
+          let pairChanged = false;
+          if (!newToolAccess.decrypt) {
+            newToolAccess.decrypt = true;
+            pairChanged = true;
+          }
+          if (!newToolAccess.forensic) {
+            newToolAccess.forensic = true;
+            pairChanged = true;
+          }
+          if (pairChanged) {
+            hasChanges = true;
+            addOutput('📋 Case file: Decoded it — they were after the customer vault. Time to recover the files and sweep for anything else they touched.', 'system');
+            addOutput('🔓 NEW SKILL UNLOCKED: 🔑 Unlock the File - Use keys to open locked files safely!', 'success');
+            addOutput('🔓 NEW SKILL UNLOCKED: 🕵️ Find the Clues - Investigate computers like a detective to solve cyber mysteries!', 'success');
+          }
+        }
+
+        if (hasChanges) {
+          return { ...prev, toolAccess: newToolAccess };
+        }
+        return prev;
+      });
+      return;
+    }
+
     setGameState(prev => {
       const newToolAccess = { ...prev.toolAccess };
       let hasChanges = false;
@@ -821,23 +1268,158 @@ Good luck, shadow.
 
   // Define critical functions early using useCallback to avoid dependency issues
   const showMissionBriefingCommand = useCallback(() => {
-    addOutput('\n' + '═'.repeat(50), 'system');
-    addOutput(`🏴‍☠️ ${missionStory.title}`, 'system');
-    addOutput('═'.repeat(50), 'system');
+    const isK5 = ageTier === 'k5';
+    addOutput('\n' + '═'.repeat(isK5 ? 30 : 50), 'system');
+    addOutput(`${isK5 ? '🛡️' : '🏴‍☠️'} ${missionStory.title}`, 'system');
+    addOutput('═'.repeat(isK5 ? 30 : 50), 'system');
     addOutput(missionStory.briefing, 'system');
-    addOutput('═'.repeat(50), 'system');
-    addOutput('\n💀 status  - View progress', 'system');
-    addOutput('🏆 help    - Show commands', 'system');
-  }, [missionStory.title, missionStory.briefing]);
+    addOutput('═'.repeat(isK5 ? 30 : 50), 'system');
+    if (isK5) {
+      addOutput('\n✅ status  - See your progress', 'system');
+    } else {
+      addOutput('\n💀 status  - View progress', 'system');
+      addOutput('🏆 help    - Show commands', 'system');
+    }
+  }, [missionStory.title, missionStory.briefing, ageTier]);
+
+  // --- K-5 cinematic boot intro -------------------------------------------
+  // Instead of dumping the whole connection/briefing block into the log at
+  // once, play it as a one-line-at-a-time "set the scene" sequence that
+  // fades in, holds, then fades out before the next line appears. Once it
+  // finishes, the real Activity Log is seeded once (guarded against
+  // double-firing) and normal play begins.
+  const [k5IntroDone, setK5IntroDone] = useState(ageTier !== 'k5');
+  const [k5IntroStep, setK5IntroStep] = useState(0);
+  const k5IntroTimerRef = useRef(null);
+  const k5IntroAdvanceRef = useRef(null);
+
+  const k5IntroScript = useMemo(() => ([
+    { text: '⚡ AEGIS VAULT', tone: 'title' },
+    { text: PIXEL.teacher(K5_PIXEL_LINES.introOpen), tone: 'system' },
+    { text: `It's late. Way past closing time at ${AEGIS_TRAINING_SECTOR}.`, tone: 'system' },
+    { text: 'Then — every monitor in the building flashes red at once.', tone: 'system' },
+    { text: 'Someone (or something) just slipped past the front gate.', tone: 'system' },
+    { text: 'Aegis needs their sharpest Security Explorer, right now...', tone: 'system' },
+    { text: '...and that\'s you. ✓', tone: 'success' },
+    { text: 'Tap the screen to step up and take the badge.', tone: 'system', waitForTap: true },
+    { text: 'Explorer ID verified ✓', tone: 'success' },
+    { text: '🛡️ Mission briefing incoming...', tone: 'system' },
+    { text: missionStory.title, tone: 'title' },
+    { text: missionStory.briefing, tone: 'briefing' },
+    { text: '👉 The network is counting on you. Let\'s learn how it speaks.', tone: 'system' }
+  ]), [missionStory.title, missionStory.briefing]);
+
+  // Once the cinematic finishes, seed the Activity Log with a short, single
+  // "ready" line — not a replay of the whole boxed briefing (the cinematic
+  // already covered that dramatically). Full mission text stays one click
+  // away via the Mission Control nav item, so nothing dumps in as a wall
+  // of text.
+  const k5FinishIntro = useCallback(() => {
+    clearTimeout(k5IntroTimerRef.current);
+    setK5IntroDone(true);
+    setOutput([
+      { type: 'system', text: '═══ AEGIS VAULT · Explorer Wing ═══' },
+      { type: 'system', text: '✅ Connected. PIXEL is online — ready when you are, Explorer.' },
+      { type: 'system', text: '👉 Pick a module on the left to begin — or click Mission Control to reread your briefing.' }
+    ]);
+  }, []);
+
+  useEffect(() => {
+    if (ageTier !== 'k5' || k5IntroDone) return;
+    if (!showMissionBriefing) return;
+
+    const stepMs = 6000;
+    let i = 0;
+
+    const advance = () => {
+      i += 1;
+      if (i >= k5IntroScript.length) {
+        k5IntroTimerRef.current = setTimeout(k5FinishIntro, 500);
+        return;
+      }
+      setK5IntroStep(i);
+      scheduleNext();
+    };
+
+    // Some script beats (e.g. the "tap the screen" prompt) pause the
+    // cinematic instead of auto-advancing. For those, no timer is set —
+    // k5IntroAdvanceRef is armed instead, and the overlay's tap handler
+    // calls it directly to move on.
+    const scheduleNext = () => {
+      clearTimeout(k5IntroTimerRef.current);
+      const current = k5IntroScript[i];
+      if (current && current.waitForTap) {
+        k5IntroAdvanceRef.current = advance;
+        return;
+      }
+      k5IntroAdvanceRef.current = null;
+      k5IntroTimerRef.current = setTimeout(advance, stepMs);
+    };
+
+    scheduleNext();
+
+    // Cleanup clears whatever timer is currently pending and disarms the
+    // tap handler. No "already started" ref guard here on purpose: React
+    // StrictMode double-invokes this effect in dev (mount → cleanup →
+    // mount), and a guard that survives the cleanup would block the second
+    // mount from ever rescheduling — which is exactly what caused the intro
+    // to freeze on line one. Without the guard, the first mount's timer
+    // gets cleared and the second mount cleanly starts the one chain that
+    // actually runs.
+    return () => {
+      clearTimeout(k5IntroTimerRef.current);
+      k5IntroAdvanceRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ageTier, showMissionBriefing]);
+
+  // --- K-5 incident-response phase cutscenes -------------------------------
+  // Whenever the player's progress crosses into a new phase of the
+  // (kid-framed) incident response cycle, show a brief full-screen beat —
+  // icon + step name + one line of context — before returning to play.
+  const [k5Cutscene, setK5Cutscene] = useState(null);
+  const k5LastPhaseRef = useRef(null);
+
+  useEffect(() => {
+    if (ageTier !== 'k5' || !k5IntroDone) return;
+    const completed = gameState.completedMinigames || [];
+    const nextTool = K5_NAV_ITEMS.find(item => item.toolKey && !completed.includes(item.toolKey));
+    const phase = nextTool ? K5_TOOL_PHASE[nextTool.toolKey] : 'case_closed';
+
+    if (phase !== k5LastPhaseRef.current) {
+      k5LastPhaseRef.current = phase;
+      setK5Cutscene(K5_PHASE_INFO[phase]);
+    }
+  }, [ageTier, k5IntroDone, gameState.completedMinigames]);
+
+  useEffect(() => {
+    if (!k5Cutscene) return;
+    const t = setTimeout(() => setK5Cutscene(null), 4200);
+    return () => clearTimeout(t);
+  }, [k5Cutscene]);
 
   const showStatus = () => {
+    const isK5 = ageTier === 'k5';
+
+    if (isK5) {
+      addOutput('\n' + '═'.repeat(30), 'system');
+      addOutput('✅ MY PROGRESS', 'system');
+      addOutput('═'.repeat(30), 'system');
+      addOutput(`\n🎯 Next: ${storyProgress.currentObjective}`, 'system');
+      addOutput(`🛠️ Tools done: ${gameState.completedMinigames.length}/${activeTools.length}`, 'system');
+      const alarmLevel = gameState.securityAlerts.level || 0;
+      addOutput(`🚨 Alarm meter: ${'🔴'.repeat(alarmLevel)}${'⚪'.repeat(Math.max(0, 5 - alarmLevel))}`, alarmLevel > 2 ? 'error' : 'system');
+      addOutput('═'.repeat(30) + '\n', 'system');
+      return;
+    }
+
     addOutput('\n' + '═'.repeat(50), 'system');
     addOutput('📊 MISSION STATUS', 'system');
     addOutput('═'.repeat(50), 'system');
-    
+
     // Show current objective
     addOutput(`\n🎯 Objective: ${storyProgress.currentObjective}`, 'system');
-    
+
     // Show next steps
     if (storyProgress.nextSteps.length > 0) {
       addOutput('\n📝 Next Steps:', 'system');
@@ -845,24 +1427,24 @@ Good luck, shadow.
         addOutput(`  • ${step}`, 'system');
       });
     }
-    
+
     // Show progress
     addOutput('\n📈 Progress:', 'system');
     addOutput(`  • Networks: ${gameState.scannedDevices.length} devices`, 'system');
     addOutput(`  • Systems: ${gameState.compromisedDevices.length} accessed`, 'system');
     addOutput(`  • Files: ${gameState.decryptedFiles.length} decrypted`, 'system');
-    
+
     // Show security status
     const detectionLevel = Math.max(
       gameState.detectionLevel || 0,
       gameState.sshDetectionLevel || 0,
       gameState.sessionRisk || 0
     );
-    
+
     addOutput('\n🛡️ Security:', 'system');
     addOutput(`  • Detection: ${detectionLevel}%`, detectionLevel > 50 ? 'error' : 'system');
     addOutput(`  • Alerts: ${gameState.securityAlerts.level}/5`, gameState.securityAlerts.level > 2 ? 'error' : 'system');
-    
+
     addOutput('═'.repeat(50) + '\n', 'system');
   };
 
@@ -915,6 +1497,7 @@ Good luck, shadow.
   const restartMission = () => {
     // Reset all game state
     setGameState({
+      ageTier,
       completedMinigames: [],
       completedTools: [],
       unlockedTools: ['scan'],
@@ -954,9 +1537,13 @@ Good luck, shadow.
       },
       story: {
         phase: 'reconnaissance',
-        currentObjective: 'Begin network reconnaissance to identify entry points',
+        currentObjective: ageTier === 'k5'
+          ? 'Begin scanning TechCorp\'s network to find the intruder\'s tracks'
+          : 'Begin network reconnaissance to identify entry points',
         missionBriefingShown: false,
-        context: 'You are an ethical hacker conducting a penetration test on TechCorp Industries.'
+        context: ageTier === 'k5'
+          ? 'You are a Cyber Cadet helping TechCorp Industries test and defend their network.'
+          : 'You are a contracted operative running an unauthorized infiltration of TechCorp Industries.'
       },
       network: {
         discoveredHosts: [],
@@ -984,18 +1571,7 @@ Good luck, shadow.
         escalationPaths: [],
         advancedPersistence: []
       },
-      toolAccess: {
-        scan: true,
-        social: true,
-        crack: false,
-        ssh: false,
-        phish: false,
-        malware: false,
-        firewall: false,
-        crypto: false,
-        decrypt: false,
-        forensic: false
-      },
+      toolAccess: buildInitialToolAccess(ageTier),
       detectionLevel: 0,
       sshDetectionLevel: 0,
       sessionRisk: 0,
@@ -1008,17 +1584,8 @@ Good luck, shadow.
         suspiciousActivities: []
       },
       failureConditions: {
-        maxDetectionLevel: 75,
-        maxFailedAttempts: 3,
-        maxSecurityAlerts: 3,
-        timeLimit: 1800000,
         criticalFailures: 0,
-        maxCommandsPerMinute: 15,
-        maxHoneypotHits: 1,
-        maxCredentialLockouts: 2,
-        maxNoiseLevel: 50,
-        maxSuspicionScore: 80,
-        maxForensicTrail: 25
+        ...(tierFailurePresets[ageTier] || tierFailurePresets.middle)
       },
       failedAttempts: {
         ssh: 0,
@@ -1049,8 +1616,12 @@ Good luck, shadow.
     setStoryProgress({
       phase: 'initial',
       completedMinigames: [],
-      currentObjective: 'Begin silent reconnaissance of TechCorp infrastructure',
-      nextSteps: ['Use stealth network scanner to map target network without detection'],
+      currentObjective: ageTier === 'k5'
+        ? 'Start exploring TechCorp\'s network'
+        : 'Begin silent reconnaissance of TechCorp infrastructure',
+      nextSteps: [ageTier === 'k5'
+        ? 'Use the network scanner to map TechCorp\'s network'
+        : 'Use stealth network scanner to map target network without detection'],
       intelligence: {
         networkDevices: [],
         employeeData: [],
@@ -1058,21 +1629,31 @@ Good luck, shadow.
         accessCredentials: []
       }
     });
-    
+
     // Clear output and show restart message
-    setOutput([
-      { type: 'system', text: '═══ 🔄 MISSION RESTART - NEW IDENTITY ACQUIRED 🔄 ═══' },
-      { type: 'system', text: 'Shadow Network Access Point v4.2.1' },
-      { type: 'system', text: 'New identity forged... ✓' },
-      { type: 'system', text: 'Previous operation traces eliminated... ✓' },
-      { type: 'system', text: 'Enhanced stealth protocols activated... ✓' },
-      { type: 'system', text: 'VPN chains refreshed. New shadow identity active. 👤' },
-      { type: 'system', text: '' },
-      { type: 'system', text: '💀 You\'ve learned from your mistakes. This time, stay invisible.' },
-      { type: 'system', text: '🛠️  Type "help" for stealth-focused tools and commands' },
-      { type: 'system', text: '🏆 Type "mission" to review your assignment' },
-      { type: 'system', text: '⚠️  Remember: Detection leads to mission failure!' }
-    ]);
+    setOutput(
+      ageTier === 'k5' ? [
+        { type: 'system', text: '═══ 🔄 MISSION RESTART ═══' },
+        { type: 'system', text: 'Cyber Cadet Academy Terminal v4.2.1' },
+        { type: 'system', text: 'Resetting your training session... ✓' },
+        { type: 'system', text: '' },
+        { type: 'system', text: '🛡️ No worries - every cadet restarts sometimes! Let\'s try again.' },
+        { type: 'system', text: '🛠️  Type "help" to see your tools and commands' },
+        { type: 'system', text: '🏆 Type "mission" to review your assignment' }
+      ] : [
+        { type: 'system', text: '═══ 🔄 MISSION RESTART - NEW IDENTITY ACQUIRED 🔄 ═══' },
+        { type: 'system', text: 'Shadow Network Access Point v4.2.1' },
+        { type: 'system', text: 'New identity forged... ✓' },
+        { type: 'system', text: 'Previous operation traces eliminated... ✓' },
+        { type: 'system', text: 'Enhanced stealth protocols activated... ✓' },
+        { type: 'system', text: 'VPN chains refreshed. New shadow identity active. 👤' },
+        { type: 'system', text: '' },
+        { type: 'system', text: '💀 You\'ve learned from your mistakes. This time, stay invisible.' },
+        { type: 'system', text: '🛠️  Type "help" for stealth-focused tools and commands' },
+        { type: 'system', text: '🏆 Type "mission" to review your assignment' },
+        { type: 'system', text: '⚠️  Remember: Detection leads to mission failure!' }
+      ]
+    );
   };
 
   // Empty useEffect to maintain component structure
@@ -1080,20 +1661,24 @@ Good luck, shadow.
     // Guidance system removed
   }, []);
 
-  // Show mission briefing on first load
+  // Show mission briefing on first load (non-k5 only — K-5 plays the
+  // cinematic boot intro instead, see k5IntroScript/k5FinishIntro above)
   useEffect(() => {
+    if (ageTier === 'k5') return;
     if (showMissionBriefing && output.length === 0) {
       setTimeout(() => {
-        setOutput([
-          { type: 'system', text: '═══ SHADOWNET TERMINAL ═══' },
-          { type: 'system', text: 'Connection established ✓' },
-          { type: 'system', text: 'Identity verified ✓' },
-          { type: 'system', text: '' },
-          { type: 'system', text: '💀 mission  - View assignment' },
-          { type: 'system', text: '🛠️  help    - Show commands' },
-          { type: 'system', text: '🏆 quick   - Quick start guide' },
-          { type: 'system', text: '' }
-        ]);
+        setOutput(
+          [
+            { type: 'system', text: '═══ SHADOWNET TERMINAL ═══' },
+            { type: 'system', text: 'Connection established ✓' },
+            { type: 'system', text: 'Identity verified ✓' },
+            { type: 'system', text: '' },
+            { type: 'system', text: '💀 mission  - View assignment' },
+            { type: 'system', text: '🛠️  help    - Show commands' },
+            { type: 'system', text: '🏆 quick   - Quick start guide' },
+            { type: 'system', text: '' }
+          ]
+        );
         
         // Show mission briefing after brief delay
         setTimeout(() => {
@@ -1101,7 +1686,7 @@ Good luck, shadow.
         }, 2000);
       }, 1000);
     }
-  }, [showMissionBriefingCommand]);
+  }, [showMissionBriefingCommand, ageTier]);
 
   // Add global keyboard event listener for ESC key
   useEffect(() => {
@@ -1121,63 +1706,82 @@ Good luck, shadow.
     setCurrentInput(e.target.value);
   };
 
+  const promptPrefix = ageTier === 'k5' ? 'cadet@academy:~$' : 'shadownet@penetest:~$';
+
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       if (currentInput.trim()) {
-        addOutput(`shadownet@penetest:~$ ${currentInput}`, 'input');
+        addOutput(`${promptPrefix} ${currentInput}`, 'input');
         handleCommand(currentInput.trim());
         setCurrentInput('');
       }
     }
   };
 
+  // Lets buttons/clickable chips run a command on behalf of the player.
+  // For younger tiers this stands in for typing; for older tiers we mostly
+  // just pre-fill the input so they still see (and learn) the real syntax.
+  const runQuickCommand = (cmdStr, autoSubmit = true) => {
+    if (autoSubmit) {
+      addOutput(`${promptPrefix} ${cmdStr}`, 'input');
+      handleCommand(cmdStr.trim());
+      setCurrentInput('');
+    } else {
+      setCurrentInput(cmdStr);
+    }
+    inputRef.current?.focus();
+  };
+
   const handleGameExit = () => {
     setActiveGame(null);
   };
 
-  // Enhanced mission status with better formatting
+  // Enhanced mission status with better formatting (wording adapts to age tier)
   const showMissionStatus = () => {
     const currentPhase = getCurrentPhase();
     const phaseInfo = missionStory.phases[currentPhase];
-    
+    const isK5 = ageTier === 'k5';
+
     addOutput('\n' + '═'.repeat(70), 'system');
-    addOutput('🎯 INFILTRATION STATUS - OPERATION: SHADOW STRIKE', 'system');
+    addOutput(isK5 ? `🎯 MISSION STATUS - ${missionStory.title.toUpperCase()}` : `🎯 INFILTRATION STATUS - ${missionStory.title.toUpperCase()}`, 'system');
     addOutput('═'.repeat(70), 'system');
-    
+
     addOutput(`\n🎪 CURRENT PHASE: ${phaseInfo.title}`, 'system');
     addOutput(`📋 DESCRIPTION: ${phaseInfo.description}`, 'system');
     addOutput(`🎯 CURRENT OBJECTIVE: ${storyProgress.currentObjective}`, 'system');
-    
+
     addOutput('\n📊 PROGRESS SUMMARY:', 'system');
-    addOutput(`✅ Completed Exploits: ${storyProgress.completedMinigames.length}/10`, 'system');
-    addOutput(`📈 Infiltration Progress: ${Math.round((storyProgress.completedMinigames.length / 10) * 100)}%`, 'system');
+    const k5ToolTotal = TIER_TOOL_SETS.k5.length;
+    const progressTotal = isK5 ? k5ToolTotal : 10;
+    addOutput(`✅ ${isK5 ? 'Tools Completed' : 'Completed Exploits'}: ${storyProgress.completedMinigames.length}/${progressTotal}`, 'system');
+    addOutput(`📈 ${isK5 ? 'Mission Progress' : 'Infiltration Progress'}: ${Math.round((storyProgress.completedMinigames.length / progressTotal) * 100)}%`, 'system');
     addOutput(`🕵️ Stealth Rating: ${gameState.sessionStats.stealthRating}%`, 'system');
     addOutput(`⚠️  Detection Risk: ${gameState.sessionStats.detectionRisk}%`, 'system');
-    
+
     if (storyProgress.completedMinigames.length > 0) {
-      addOutput('\n🏆 SUCCESSFUL BREACHES:', 'system');
+      addOutput(isK5 ? '\n🏆 TOOLS YOU\'VE MASTERED:' : '\n🏆 SUCCESSFUL BREACHES:', 'system');
       storyProgress.completedMinigames.forEach(minigame => {
         const icons = {
           scan: '🕵️', crack: '🔓', ssh: '💻', social: '🎭', phish: '🎣',
           malware: '🦠', firewall: '🛡️', crypto: '🔐', decrypt: '💎', forensic: '🕵️'
         };
-        addOutput(`   ${icons[minigame] || '✅'} ${minigame.toUpperCase()} - Breached Successfully`, 'system');
+        addOutput(`   ${icons[minigame] || '✅'} ${minigame.toUpperCase()} - ${isK5 ? 'Completed' : 'Breached Successfully'}`, 'system');
       });
     }
-    
-    addOutput('\n🎯 NEXT TARGETS:', 'system');
+
+    addOutput(isK5 ? '\n🎯 WHAT TO DO NEXT:' : '\n🎯 NEXT TARGETS:', 'system');
     storyProgress.nextSteps.forEach(step => {
       addOutput(`   • ${step}`, 'system');
     });
-    
+
     if (phaseInfo.tools) {
-      addOutput('\n🛠️ RECOMMENDED EXPLOIT TOOLS:', 'system');
+      addOutput(isK5 ? '\n🛠️ RECOMMENDED TOOLS:' : '\n🛠️ RECOMMENDED EXPLOIT TOOLS:', 'system');
       phaseInfo.tools.forEach(tool => {
         addOutput(`   • ${tool}`, 'system');
       });
     }
-    
+
     addOutput(`   ${phaseInfo.narrative}`, 'system');
     addOutput('═'.repeat(70) + '\n', 'system');
   };
@@ -1236,24 +1840,34 @@ Good luck, shadow.
   // Session statistics display
   const showSessionStats = () => {
     const sessionTime = Math.floor((new Date() - gameState.sessionStats.timeStarted) / 1000 / 60);
-    
+
     addOutput('\n' + '═'.repeat(70), 'system');
-    addOutput('📊 SESSION STATISTICS', 'system');
+    addOutput(ageTier === 'k5' ? '📊 MY PROGRESS' : '📊 SESSION STATISTICS', 'system');
     addOutput('═'.repeat(70), 'system');
-    
-    addOutput(`\n⏱️  Session Duration: ${sessionTime} minutes`, 'system');
-    addOutput(`💻 Commands Executed: ${gameState.sessionStats.commandsExecuted}`, 'system');
-    addOutput(`🛠️  Unique Tools Used: ${gameState.sessionStats.toolsUsed.length}`, 'system');
-    addOutput(`🕵️ Stealth Rating: ${gameState.sessionStats.stealthRating}%`, 'system');
-    addOutput(`⚠️  Detection Risk: ${gameState.sessionStats.detectionRisk}%`, 'system');
-    
-    addOutput('\n🎯 OPERATION METRICS:', 'system');
-    addOutput(`🌐 Networks Mapped: ${gameState.scannedDevices.length} devices`, 'system');
-    addOutput(`💻 Systems Compromised: ${gameState.compromisedDevices.length} backdoors`, 'system');
-    addOutput(`🔑 Credentials Stolen: ${gameState.crackedPasswords.length + gameState.phishingData.length}`, 'system');
-    addOutput(`🎭 Social Intel Gathered: ${gameState.socialIntel.length} sources`, 'system');
-    addOutput(`💎 Classified Files Decrypted: ${gameState.decryptedFiles.length}`, 'system');
-    
+
+    addOutput(`\n⏱️  Time Playing: ${sessionTime} minutes`, 'system');
+    addOutput(`💻 Commands Tried: ${gameState.sessionStats.commandsExecuted}`, 'system');
+    addOutput(`🛠️  Skills Used: ${gameState.sessionStats.toolsUsed.length}`, 'system');
+
+    if (ageTier === 'k5') {
+      addOutput('\n🎯 WHAT YOU\'VE LEARNED:', 'system');
+      addOutput(`🌐 Computers Checked for Weak Spots: ${gameState.scannedDevices.length}`, 'system');
+      addOutput(`🔑 Passwords Practiced Guessing: ${gameState.crackedPasswords.length + gameState.phishingData.length}`, 'system');
+      addOutput(`🔐 Secret Codes Solved: ${gameState.cryptoKeys.length}`, 'system');
+      addOutput(`🔓 Files Unlocked Safely: ${gameState.decryptedFiles.length}`, 'system');
+      addOutput(`🕵️ Clues Found: ${gameState.forensicEvidence.length}`, 'system');
+    } else {
+      addOutput(`🕵️ Stealth Rating: ${gameState.sessionStats.stealthRating}%`, 'system');
+      addOutput(`⚠️  Detection Risk: ${gameState.sessionStats.detectionRisk}%`, 'system');
+
+      addOutput('\n🎯 OPERATION METRICS:', 'system');
+      addOutput(`🌐 Networks Mapped: ${gameState.scannedDevices.length} devices`, 'system');
+      addOutput(`💻 Systems Compromised: ${gameState.compromisedDevices.length} backdoors`, 'system');
+      addOutput(`🔑 Credentials Stolen: ${gameState.crackedPasswords.length + gameState.phishingData.length}`, 'system');
+      addOutput(`🎭 Social Intel Gathered: ${gameState.socialIntel.length} sources`, 'system');
+      addOutput(`💎 Classified Files Decrypted: ${gameState.decryptedFiles.length}`, 'system');
+    }
+
     if (gameState.sessionStats.toolsUsed.length > 0) {
       addOutput('\n🛠️ TOOLS UTILIZED:', 'system');
       gameState.sessionStats.toolsUsed.forEach(tool => {
@@ -1271,9 +1885,20 @@ Good luck, shadow.
   // Enhanced intelligence summary
   const showIntelligenceSummary = () => {
     addOutput('\n' + '═'.repeat(70), 'system');
-    addOutput('🕵️ STOLEN INTELLIGENCE SUMMARY', 'system');
+    addOutput(ageTier === 'k5' ? '🕵️ MY DETECTIVE NOTEBOOK' : '🕵️ STOLEN INTELLIGENCE SUMMARY', 'system');
     addOutput('═'.repeat(70), 'system');
-    
+
+    if (ageTier === 'k5') {
+      addOutput(`\n🌐 Computers Checked: ${gameState.scannedDevices.length}`, 'system');
+      addOutput(`🔑 Passwords Practiced: ${gameState.crackedPasswords.length}`, 'system');
+      addOutput(`🎣 Trick Emails Spotted: ${gameState.phishingData.length}`, 'system');
+      addOutput(`🔐 Secret Codes Solved: ${gameState.cryptoKeys.length}`, 'system');
+      addOutput(`🔓 Files Unlocked: ${gameState.decryptedFiles.length}`, 'system');
+      addOutput(`🕵️ Clues Found: ${gameState.forensicEvidence.length}`, 'system');
+      addOutput('═'.repeat(70) + '\n', 'system');
+      return;
+    }
+
     addOutput(`\n🌐 Network Assets Mapped: ${gameState.scannedDevices.length} systems identified`, 'system');
     addOutput(`💻 Systems Compromised: ${gameState.compromisedDevices.length} backdoors active`, 'system');
     addOutput(`🔑 Credentials Stolen: ${gameState.crackedPasswords.length} password hashes cracked`, 'system');
@@ -1303,19 +1928,30 @@ Good luck, shadow.
     addOutput('═'.repeat(70) + '\n', 'system');
   };
 
-  // Enhanced available tools display
+  // Enhanced available tools display — wording and density scale with ageTier
   const showAvailableTools = () => {
+    if (ageTier === 'k5') {
+      const unlockedCount = Object.values(gameState.toolAccess).filter(Boolean).length;
+      addOutput('\n' + '═'.repeat(34), 'system');
+      addOutput('🛠️ THINGS YOU CAN DO', 'system');
+      addOutput('═'.repeat(34), 'system');
+      addOutput('\n👉 Click a button below to play!', 'system');
+      addOutput(`🔓 Tools unlocked: ${unlockedCount}/${activeTools.length} (more unlock as you go)`, 'system');
+      addOutput('═'.repeat(34) + '\n', 'system');
+      return;
+    }
+
     addOutput('\n' + '═'.repeat(50), 'system');
     addOutput('🛠️ AVAILABLE COMMANDS', 'system');
     addOutput('═'.repeat(50), 'system');
-    
+
     // Basic commands
     addOutput('\n📋 BASIC:', 'system');
     addOutput('  help     - Show this menu', 'system');
     addOutput('  mission  - View assignment', 'system');
     addOutput('  status   - Check progress', 'system');
     addOutput('  clear    - Clear screen', 'system');
-    
+
     // Tools
     addOutput('\n🛠️ TOOLS:', 'system');
     Object.entries(gameState.toolAccess).forEach(([tool, unlocked]) => {
@@ -1323,12 +1959,28 @@ Good luck, shadow.
       const status = unlocked ? '✅' : '🔒';
       addOutput(`  ${status} ${tool.padEnd(8)} - ${toolInfo.description}`, unlocked ? 'success' : 'warning');
     });
-    
+
     addOutput('\n💡 TIP: Start with "scan" to discover network devices', 'system');
+    if (ageTier === 'high') {
+      addOutput('🧪 This range mirrors real enterprise topology — treat it like a live engagement.', 'system');
+    }
     addOutput('═'.repeat(50) + '\n', 'system');
   };
 
   const getToolInfo = (tool) => {
+    const toolDescriptionsK5 = {
+      scan: { description: 'Look around the network for computers' },
+      social: { description: 'Practice spotting a trick message' },
+      crack: { description: 'Guess a weak password' },
+      ssh: { description: 'Log in to a computer you found' },
+      phish: { description: 'See how a fake email tricks people' },
+      malware: { description: 'Study a bad computer program safely' },
+      firewall: { description: 'Get past a digital lock' },
+      crypto: { description: 'Solve a secret code' },
+      decrypt: { description: 'Unlock a locked file' },
+      forensic: { description: 'Look for clues left behind' }
+    };
+
     const toolDescriptions = {
       scan: { description: 'Network scanner - Discover devices and vulnerabilities', difficulty: 'Beginner', points: 5 },
       social: { description: 'Social engineer - Manipulate human targets', difficulty: 'Intermediate', points: 12 },
@@ -1341,7 +1993,10 @@ Good luck, shadow.
       decrypt: { description: 'File decryptor - Unlock encrypted data', difficulty: 'Expert', points: 28 },
       forensic: { description: 'Digital forensics - Analyze digital evidence', difficulty: 'Master', points: 45 }
     };
-    
+
+    if (ageTier === 'k5') {
+      return toolDescriptionsK5[tool] || { description: 'A mystery tool' };
+    }
     return toolDescriptions[tool] || { description: 'Unknown tool', difficulty: 'Unknown', points: 0 };
   };
 
@@ -1354,12 +2009,26 @@ Good luck, shadow.
   };
 
   const showQuickStart = () => {
+    if (ageTier === 'k5') {
+      addOutput('\n' + '═'.repeat(36), 'system');
+      addOutput('🚀 HOW TO PLAY', 'system');
+      addOutput('═'.repeat(36), 'system');
+      addOutput('\n1. Click "My Mission" to read your job', 'system');
+      addOutput('2. Click "Look Around" to find computers', 'system');
+      addOutput('3. Click "My Progress" any time', 'system');
+      addOutput('═'.repeat(36) + '\n', 'system');
+      return;
+    }
+
     addOutput('\n' + '═'.repeat(50), 'system');
     addOutput('🚀 QUICK START', 'system');
     addOutput('═'.repeat(50), 'system');
     addOutput('\n1. Type "mission" to read assignment', 'system');
     addOutput('2. Type "scan" to start hacking', 'system');
     addOutput('3. Type "status" to track progress', 'system');
+    if (ageTier === 'high') {
+      addOutput('4. Treat every step like a real engagement — recon, exploit, report', 'system');
+    }
     addOutput('═'.repeat(50) + '\n', 'system');
   };
 
@@ -1678,6 +2347,15 @@ Good luck, shadow.
       // Tool access checking with error handling
       const checkToolAccessWithFeedback = (toolName) => {
         try {
+          if (!activeTools.includes(toolName)) {
+            addOutput(
+              ageTier === 'k5'
+                ? `🔒 That tool isn't part of your mission. Try: ${activeTools.join(', ')}`
+                : `❌ ${toolName} isn't available in this mode.`,
+              'warning'
+            );
+            return false;
+          }
           if (!checkToolAccess(toolName)) {
             const requirement = getToolUnlockRequirement(toolName);
             addOutput(`❌ Access denied: ${requirement}`, 'error');
@@ -1730,7 +2408,26 @@ Good luck, shadow.
               }));
               
               addOutput(`Network scan complete: ${devices.length} devices found`);
-              
+
+              // Younger tiers get the target list right away, as clickable
+              // chips, so they don't have to type "devices" then an IP by hand.
+              if (ageTier !== 'high' && activeTools.includes('ssh') && devices.length > 0) {
+                addOutput('🎯 Click a target to connect:');
+                devices.forEach(device => {
+                  const vulnCount = device.vulnerabilities?.length || 0;
+                  const riskLevel = vulnCount > 2 ? '🔴' : vulnCount > 0 ? '🟡' : '🟢';
+                  addOutput(
+                    <button
+                      type="button"
+                      className="quick-target-chip"
+                      onClick={() => runQuickCommand(`ssh ${device.ip}`, ageTier === 'k5')}
+                    >
+                      {riskLevel} {device.ip} - {device.type}
+                    </button>
+                  );
+                });
+              }
+
               // Enhanced threat escalation for network scanning
               if (devices.length > 15) { // Increased threshold
                 escalateSecurityAlert('Extensive network reconnaissance detected - large footprint', 2);
@@ -1781,25 +2478,30 @@ Good luck, shadow.
                 crackedPasswords: [...prev.crackedPasswords, crackResult]
               }));
               
-              // Moderate escalation for password cracking - immediate risk
-              escalateSecurityAlert('Password authentication breach detected', 1);
-              
-              // Enhanced escalation for multiple cracks
-              const crackedCount = gameState.crackedPasswords.length + 1;
-              if (crackedCount >= 3) { // Escalate after 3 successful cracks
-                escalateSecurityAlert('Multiple credential thefts detected - security breach', 2);
-                addOutput(`🚨 ALERT: ${crackedCount} passwords compromised - enhanced monitoring activated`, 'warning');
-              }
-              
-              // Random chance of triggering account lockout response
-              if (Math.random() < 0.2) { // 20% chance
-                escalateSecurityAlert('Account lockout procedures activated', 1);
-                addOutput(`🔒 SYSTEM RESPONSE: Authentication monitoring increased`, 'warning');
-              }
-              
-              addOutput(`\n💀 PASSWORD CRACKED: ${password}`);
-              if (crackResult.deviceIp) {
-                addOutput(`   Target: ${crackResult.target} (${crackResult.deviceIp})`);
+              if (ageTier === 'k5') {
+                addOutput(`\n🔓 NICE WORK: You guessed the password "${password}"!`);
+                addOutput(`💡 Tip: Strong passwords mix letters, numbers, and symbols so they're harder to guess.`, 'info');
+              } else {
+                // Moderate escalation for password cracking - immediate risk
+                escalateSecurityAlert('Password authentication breach detected', 1);
+
+                // Enhanced escalation for multiple cracks
+                const crackedCount = gameState.crackedPasswords.length + 1;
+                if (crackedCount >= 3) { // Escalate after 3 successful cracks
+                  escalateSecurityAlert('Multiple credential thefts detected - security breach', 2);
+                  addOutput(`🚨 ALERT: ${crackedCount} passwords compromised - enhanced monitoring activated`, 'warning');
+                }
+
+                // Random chance of triggering account lockout response
+                if (Math.random() < 0.2) { // 20% chance
+                  escalateSecurityAlert('Account lockout procedures activated', 1);
+                  addOutput(`🔒 SYSTEM RESPONSE: Authentication monitoring increased`, 'warning');
+                }
+
+                addOutput(`\n💀 PASSWORD CRACKED: ${password}`);
+                if (crackResult.deviceIp) {
+                  addOutput(`   Target: ${crackResult.target} (${crackResult.deviceIp})`);
+                }
               }
               updateStoryProgress('crack', crackResult);
               setActiveGame(null);
@@ -1816,8 +2518,13 @@ Good luck, shadow.
                 phishingData: [...prev.phishingData, result]
               }));
               
-              addOutput(`Phishing campaign successful: ${result.target}`);
-              addOutput(`\n🎣 SOCIAL MANIPULATION: TechCorp employees compromised`);
+              if (ageTier === 'k5') {
+                addOutput(`🎣 Great job spotting trick emails: ${result.spotted}/${result.total} correct!`);
+                addOutput(`\n🛡️ SKILL LEARNED: You can now recognize phishing emails`);
+              } else {
+                addOutput(`Phishing campaign successful: ${result.target}`);
+                addOutput(`\n🎣 SOCIAL MANIPULATION: TechCorp employees compromised`);
+              }
               
               updateStoryProgress('phish', result);
               setActiveGame(null);
@@ -1911,9 +2618,14 @@ Good luck, shadow.
                 cryptoKeys: [...prev.cryptoKeys, extractedKey]
               }));
               
-              addOutput(`✅ Cryptography challenge complete!`);
-              addOutput(`🔐 Decryption key obtained: ${extractedKey}`);
-              addOutput(`\n🗝️ CRYPTOGRAPHIC ACCESS GRANTED: Encrypted files can now be decrypted`);
+              if (ageTier === 'k5') {
+                addOutput(`✅ Code solved! You earned a new key: ${extractedKey}`);
+                addOutput(`\n🔑 You can use this key to unlock a locked file`);
+              } else {
+                addOutput(`✅ Cryptography challenge complete!`);
+                addOutput(`🔐 Decryption key obtained: ${extractedKey}`);
+                addOutput(`\n🗝️ CRYPTOGRAPHIC ACCESS GRANTED: Encrypted files can now be decrypted`);
+              }
               
               updateStoryProgress('crypto', result);
               setActiveGame(null);
@@ -1929,8 +2641,12 @@ Good luck, shadow.
                 decryptedFiles: [...prev.decryptedFiles, file]
               }));
               
-              addOutput(`File decrypted: ${file.name}`);
-              addOutput(`\n💎 DATA HEIST SUCCESS: Encrypted secrets unlocked`);
+              if (ageTier === 'k5') {
+                addOutput(`🔓 You unlocked ${file.name}! Great job using your key safely.`);
+              } else {
+                addOutput(`File decrypted: ${file.name}`);
+                addOutput(`\n💎 DATA HEIST SUCCESS: Encrypted secrets unlocked`);
+              }
               
               updateStoryProgress('decrypt', file);
               setActiveGame(null);
@@ -1946,8 +2662,12 @@ Good luck, shadow.
                 forensicEvidence: [...prev.forensicEvidence, result]
               }));
               
-              addOutput(`Digital forensics complete: ${result.artifact}`);
-              addOutput(`\n🕵️ EVIDENCE EXTRACTION: Hidden data recovered`);
+              if (ageTier === 'k5') {
+                addOutput(`🕵️ Case closed on ${result.artifact}! You found all the clues.`);
+              } else {
+                addOutput(`Digital forensics complete: ${result.artifact}`);
+                addOutput(`\n🕵️ EVIDENCE EXTRACTION: Hidden data recovered`);
+              }
               
               updateStoryProgress('forensic', result);
               setActiveGame(null);
@@ -2097,9 +2817,19 @@ Good luck, shadow.
             });
           }
           
-          setActiveGame({ 
-            component, 
-            name: toolName, 
+          const k5ToolNames = {
+            scan: '🔍 Look Around',
+            crack: '🔑 Guess the Password',
+            phish: '🎣 Spot the Trick Email',
+            crypto: '🔐 Solve the Code',
+            decrypt: '🔓 Unlock the File',
+            forensic: '🕵️ Find the Clues'
+          };
+
+          setActiveGame({
+            component,
+            name: toolName,
+            k5Name: k5ToolNames[toolName] || toolName,
             props: { ...props, ...callbacks, gameState, addOutput, storyContext }
           });
         } catch (error) {
@@ -2188,9 +2918,25 @@ Good luck, shadow.
             gameState.scannedDevices.forEach(device => {
               const vulnCount = device.vulnerabilities?.length || 0;
               const riskLevel = vulnCount > 2 ? '🔴' : vulnCount > 0 ? '🟡' : '🟢';
-              addOutput(`${riskLevel} ${device.ip} - ${device.type} (${vulnCount} exploits available)`);
+              if (ageTier === 'high' || !activeTools.includes('ssh')) {
+                addOutput(`${riskLevel} ${device.ip} - ${device.type} (${vulnCount} exploits available)`);
+              } else {
+                addOutput(
+                  <button
+                    type="button"
+                    className="quick-target-chip"
+                    onClick={() => runQuickCommand(`ssh ${device.ip}`, ageTier === 'k5')}
+                  >
+                    {riskLevel} {device.ip} - {device.type} ({vulnCount} exploits) — click to target
+                  </button>
+                );
+              }
             });
-            addOutput('💡 Use SSH <ip> to infiltrate specific targets\n');
+            if (activeTools.includes('ssh')) {
+              addOutput('💡 Use SSH <ip> to infiltrate specific targets\n');
+            } else {
+              addOutput('');
+            }
           }
           break;
         case 'crack':
@@ -2212,7 +2958,19 @@ Good luck, shadow.
                 if (device.openPorts?.includes(22)) {
                   const isCompromised = gameState.compromisedDevices.some(d => d.ip === device.ip);
                   const status = isCompromised ? '✅ COMPROMISED' : '🎯 AVAILABLE';
-                  addOutput(`  ${status} ${device.ip} - SSH available`);
+                  if (ageTier === 'high') {
+                    addOutput(`  ${status} ${device.ip} - SSH available`);
+                  } else {
+                    addOutput(
+                      <button
+                        type="button"
+                        className="quick-target-chip"
+                        onClick={() => runQuickCommand(`ssh ${device.ip}`, ageTier === 'k5')}
+                      >
+                        {status} {device.ip} - click to connect
+                      </button>
+                    );
+                  }
                 }
               });
             }
@@ -2248,7 +3006,19 @@ Good luck, shadow.
             if (gameState.scannedDevices.length > 0) {
               addOutput('🎯 Available targets:');
               gameState.scannedDevices.forEach(device => {
-                addOutput(`  🎯 ${device.ip} - ${device.type}`);
+                if (ageTier === 'high') {
+                  addOutput(`  🎯 ${device.ip} - ${device.type}`);
+                } else {
+                  addOutput(
+                    <button
+                      type="button"
+                      className="quick-target-chip"
+                      onClick={() => runQuickCommand(`firewall ${device.ip}`, ageTier === 'k5')}
+                    >
+                      🎯 {device.ip} - {device.type} — click to target
+                    </button>
+                  );
+                }
               });
             }
             addOutput('');
@@ -3164,6 +3934,55 @@ Good luck, shadow.
   };
 
   // Advanced Guidance System with AI Mentor
+  // K-5 only: a friendly coach persona that mirrors guidanceSystem's hint
+  // logic but with no "elite hacker" / criminal language, short sentences.
+  const coachByte = {
+    greetings: K5_PIXEL_LINES.hintGreeting,
+    encouragement: [
+      "🌟 Great job! You're learning real cybersecurity skills.",
+      "🌟 Nice work! Keep being careful and curious.",
+      "🌟 You're doing great, Cadet!"
+    ],
+    warning: [
+      "⚠️ Slow down a little - too many mistakes can set off alarms.",
+      "⚠️ Careful, Cadet! Take your time so you don't trip the alarm.",
+    ],
+    getHint: (gs) => {
+      // Mirrors the K-5 unlock chain, grouped into incident-response phases:
+      // Detect (scan) -> Contain (crack + phish, either order) -> Eradicate
+      // (crypto) -> Recover (decrypt + forensic, either order).
+      if (!gs.scannedDevices?.length) {
+        return { message: "🔍 Try typing or clicking SCAN to look for computers on the network.", context: "Detect phase: every good security check starts by looking around first." };
+      }
+      const crackDone = !!gs.crackedPasswords?.length;
+      const phishDone = !!gs.phishingData?.length;
+      if (!crackDone || !phishDone) {
+        if (!crackDone && !phishDone) {
+          return { message: "🔐 You're in the Contain phase — two leads to check: try CRACK or PHISH, whichever you want first.", context: "Weak passwords and trick emails are the two most common ways accounts get broken into." };
+        }
+        if (!crackDone) {
+          return { message: "🔓 Try CRACK to test a weak password.", context: "That's the other Contain lead — almost done with this phase." };
+        }
+        return { message: "🎣 Try PHISH to see how a trick email works.", context: "That's the other Contain lead — almost done with this phase." };
+      }
+      if (!gs.cryptoKeys?.length) {
+        return { message: "🔐 Try CRYPTO to solve a secret code.", context: "Eradicate phase: codes and ciphers are an early form of encryption." };
+      }
+      const decryptDone = !!gs.decryptedFiles?.length;
+      const forensicDone = (gs.completedMinigames || []).includes('forensic');
+      if (!decryptDone || !forensicDone) {
+        if (!decryptDone && !forensicDone) {
+          return { message: "🔓 You're in the Recover phase — two leads left: try DECRYPT or FORENSIC, whichever you want first.", context: "Use the key you found, or start sweeping for leftover clues." };
+        }
+        if (!decryptDone) {
+          return { message: "💎 Try DECRYPT to unlock a locked file.", context: "That's the other Recover lead — almost done with this phase." };
+        }
+        return { message: "🕵️ Try FORENSIC to look for clues left behind.", context: "That's the other Recover lead — almost done with this phase." };
+      }
+      return { message: "🎯 Check STATUS to see what's left.", context: "Case closed — you're all done, Cadet!" };
+    }
+  };
+
   const guidanceSystem = {
     mentor: {
       name: "Ghost",
@@ -3377,19 +4196,33 @@ Good luck, shadow.
 
   // Enhanced guidance commands
   const showMentorDialog = () => {
+    if (ageTier === 'k5') {
+      const response = coachByte.greetings[Math.floor(Math.random() * coachByte.greetings.length)];
+      const hint = coachByte.getHint(gameState);
+      addOutput('\n' + '═'.repeat(40), 'system');
+      addOutput('🤖 COACH BYTE', 'system');
+      addOutput('═'.repeat(40), 'system');
+      addOutput(`\n${response}`, 'system');
+      addOutput(`\n${hint.message}`, 'system');
+      addOutput(`${hint.context}`, 'system');
+      addOutput('\nTry: hint, status, mission', 'system');
+      addOutput('═'.repeat(40) + '\n', 'system');
+      return;
+    }
+
     const responses = guidanceSystem.mentor.responses.greeting;
     const response = responses[Math.floor(Math.random() * responses.length)];
-    
+
     addOutput('\n' + '═'.repeat(70), 'system');
     addOutput('👤 AI MENTOR - "GHOST" GUIDANCE SYSTEM', 'system');
     addOutput('═'.repeat(70), 'system');
     addOutput(`\n${response}`, 'system');
-    
+
     const hint = guidanceSystem.getContextualHint(gameState);
     addOutput(`\n💡 TACTICAL ASSESSMENT:`, 'system');
     addOutput(`${hint.message}`, hint.priority === 'critical' ? 'error' : hint.priority === 'high' ? 'warning' : 'system');
     addOutput(`📚 CONTEXT: ${hint.context}`, 'system');
-    
+
     const suggestions = guidanceSystem.getSmartSuggestions(gameState);
     if (suggestions.length > 0) {
       addOutput('\n🎯 SMART SUGGESTIONS:', 'system');
@@ -3401,7 +4234,7 @@ Good luck, shadow.
         }
       });
     }
-    
+
     addOutput('\n💀 GHOST COMMANDS:', 'system');
     addOutput('  hint       - Get contextual guidance for current situation', 'system');
     addOutput('  next       - Show immediate next objectives', 'system');
@@ -3412,23 +4245,33 @@ Good luck, shadow.
   };
 
   const showContextualHint = () => {
+    if (ageTier === 'k5') {
+      const hint = coachByte.getHint(gameState);
+      addOutput('\n💡 HINT:', 'system');
+      addOutput(hint.message, 'system');
+      addOutput(hint.context, 'system');
+      addOutput(`\n${coachByte.encouragement[Math.floor(Math.random() * coachByte.encouragement.length)]}`, 'system');
+      addOutput('');
+      return;
+    }
+
     const hint = guidanceSystem.getContextualHint(gameState);
     const detectionLevel = Math.max(
       gameState.detectionLevel || 0,
       gameState.sshDetectionLevel || 0,
       gameState.sessionRisk || 0
     );
-    
+
     addOutput('\n💡 CONTEXTUAL GUIDANCE:', 'system');
-    
+
     // Priority-based formatting
-    const priorityIcon = hint.priority === 'critical' ? '🚨' : 
+    const priorityIcon = hint.priority === 'critical' ? '🚨' :
                         hint.priority === 'high' ? '⚡' :
                         hint.priority === 'medium' ? '🎯' : 'ℹ️';
-    
+
     addOutput(`${priorityIcon} ${hint.message}`, hint.priority === 'critical' ? 'error' : 'system');
     addOutput(`📖 ${hint.context}`, 'system');
-    
+
     // Adaptive feedback based on detection level
     if (detectionLevel < 25) {
       const encouragement = guidanceSystem.mentor.responses.encouragement;
@@ -3437,7 +4280,7 @@ Good luck, shadow.
       const warning = guidanceSystem.mentor.responses.warning;
       addOutput(`\n${warning[Math.floor(Math.random() * warning.length)]}`, 'error');
     }
-    
+
     addOutput('');
   };
 
@@ -3445,10 +4288,22 @@ Good luck, shadow.
     const completedTools = gameState.completedMinigames?.length || 0;
     const unlockedTools = Object.entries(gameState.toolAccess || {})
       .filter(([_, unlocked]) => unlocked).length;
-    
+
+    if (ageTier === 'k5') {
+      const hint = coachByte.getHint(gameState);
+      addOutput('\n🎯 IMMEDIATE OBJECTIVES:', 'system');
+      addOutput('═'.repeat(40), 'system');
+      addOutput(hint.message, 'system');
+      addOutput(hint.context, 'system');
+      addOutput(`\n📊 PROGRESS: ${completedTools}/${TIER_TOOL_SETS.k5.length} tools mastered`, 'system');
+      addOutput(`🔓 UNLOCKED: ${unlockedTools}/${TIER_TOOL_SETS.k5.length} tools available`, 'system');
+      addOutput('═'.repeat(40) + '\n', 'system');
+      return;
+    }
+
     addOutput('\n🎯 IMMEDIATE OBJECTIVES:', 'system');
     addOutput('═'.repeat(40), 'system');
-    
+
     // Dynamic objectives based on progress
     if (completedTools === 0) {
       addOutput('1. 🕵️ Network Reconnaissance - Type "scan"', 'system');
@@ -3627,33 +4482,264 @@ Good luck, shadow.
   const minigameOverlay = useMemo(() => {
     if (!activeGame) return null;
     return (
-      <div className="minigame-overlay">
+      <div className={`minigame-overlay tier-${ageTier}`}>
         <div className="minigame-container">
           <div className="minigame-header">
-            <h3>{activeGame.name}</h3>
+            <h3>{ageTier === 'k5' ? (activeGame.k5Name || activeGame.name) : activeGame.name}</h3>
             <button
               className="close-minigame"
               onClick={() => setActiveGame(null)}
               aria-label="Close minigame"
             >
-              ✕
+              {ageTier === 'k5' ? '✕ Done' : '✕'}
             </button>
           </div>
-          <div className="minigame-content">
+          <div className="minigame-content" ref={k5MinigameContentRef}>
+            {ageTier === 'k5' && K5_CASE_FILE_INTRO[activeGame.name] && (
+              <div className="k5-case-file-banner">{K5_CASE_FILE_INTRO[activeGame.name]}</div>
+            )}
             {activeGame.component && React.createElement(activeGame.component, activeGame.props || {})}
+            {ageTier === 'k5' && k5ShowScrollHint && (
+              <div className="k5-scroll-hint">👇 Scroll for more</div>
+            )}
           </div>
         </div>
       </div>
     );
-  }, [activeGame]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeGame, ageTier, k5ShowScrollHint]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lightweight "SIEM-style" status panel for K-5 — derived mostly from
+  // existing output/gameState data, plus the small hqFeed/rank helpers above.
+  const hqLastLine = hqFeed[hqFeed.length - 1];
+  const hqAlertLevel = (hqLastLine?.type === 'error' || hqLastLine?.type === 'critical' || hqLastLine?.type === 'lockdown')
+    ? 'alert'
+    : hqLastLine?.type === 'warning'
+      ? 'watch'
+      : 'safe';
+  const hqAlertLabel = hqAlertLevel === 'alert'
+    ? '🔴 NEEDS A LOOK'
+    : hqAlertLevel === 'watch'
+      ? '🟡 STAY ALERT'
+      : '🟢 ALL SYSTEMS SAFE';
+
+  const hqBadgeCount = gameState.completedMinigames.length;
+  const hqBadgeTotal = activeTools.length || 1;
+  const hqBadgePct = Math.min(100, Math.round((hqBadgeCount / hqBadgeTotal) * 100));
+  const hqRank = hqBadgePct >= 100
+    ? '🏅 Master Agent'
+    : hqBadgePct >= 60
+      ? '🥈 Cyber Defender'
+      : hqBadgePct >= 25
+        ? '🥉 Cadet in Training'
+        : '🐣 Rookie Cadet';
+
+  const cyberHqPanel = ageTier === 'k5' && (
+    <div className="cyber-hq-panel">
+      <div className="hq-panel-title">
+        🛡️ Cyber HQ Status
+        <span className="hq-live-badge"><span className="hq-live-dot"></span>LIVE</span>
+      </div>
+
+      <div className={`hq-alert-row hq-${hqAlertLevel}`}>
+        <span className="hq-alert-dot"></span>
+        <span className="hq-alert-label">{hqAlertLabel}</span>
+      </div>
+
+      <button type="button" className="hq-section hq-clickable" onClick={() => runQuickCommand('mission')}>
+        <div className="hq-section-title">📋 Current Mission</div>
+        <div className="hq-section-body">{storyProgress.currentObjective}</div>
+        <div className="hq-section-hint">Tap to revisit ➡️</div>
+      </button>
+
+      <button type="button" className="hq-section hq-clickable" onClick={() => runQuickCommand('status')}>
+        <div className="hq-section-title">🏆 Cyber Rank: {hqRank}</div>
+        <div className="hq-xp-track">
+          <div className="hq-xp-fill" style={{ width: `${hqBadgePct}%` }}></div>
+        </div>
+        <div className="hq-section-body">{hqBadgeCount} / {hqBadgeTotal} badges earned</div>
+      </button>
+
+      <div className="hq-section hq-feed-section">
+        <div className="hq-feed-header">
+          <div className="hq-section-title">📡 Live Activity Feed</div>
+          <button type="button" className={`hq-scan-btn ${hqScanning ? 'scanning' : ''}`} onClick={hqRunScan} disabled={hqScanning}>
+            {hqScanning ? '🔄 Scanning...' : '🔄 Run Scan'}
+          </button>
+        </div>
+        <div className="hq-feed">
+          {hqFeed.length === 0 && (
+            <div className="hq-feed-empty">No activity yet — try a command!</div>
+          )}
+          {hqFeed.slice(-6).reverse().map((line, i) => (
+            <div key={i} className={`hq-feed-item hq-feed-${line.type || 'output'} ${line.ambient ? 'hq-feed-ambient' : ''}`}>
+              <span className="hq-feed-dot"></span>
+              {line.time && <span className="hq-feed-time">{line.time}</span>}
+              <span className="hq-feed-text">{String(line.text).replace(/\n/g, ' ').trim().slice(0, 70)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const k5CurrentModule = K5_NAV_ITEMS.find(i => i.id === activeGame?.name) || K5_NAV_ITEMS[0];
+
+  const k5AllDone = K5_NAV_ITEMS.every(item => !item.toolKey || gameState.completedMinigames.includes(item.toolKey));
+
+  const K5_PHASE_ORDER = ['detect', 'contain', 'eradicate', 'recover'];
+  const k5PhasesDoneCount = K5_PHASE_ORDER.filter(phase =>
+    K5_NAV_ITEMS.filter(i => i.toolKey && K5_TOOL_PHASE[i.toolKey] === phase)
+      .every(i => gameState.completedMinigames.includes(i.toolKey))
+  ).length;
+
+  const k5NavSidebar = ageTier === 'k5' && (
+    <div className="k5-nav-sidebar">
+      <div className="k5-nav-title">🧭 Case File</div>
+      <div className="k5-nav-progress">
+        <div className="k5-nav-progress-label">{k5PhasesDoneCount}/4 phases done</div>
+        <div className="k5-nav-progress-track">
+          {K5_PHASE_ORDER.map((phase, idx) => (
+            <span key={phase} className={`k5-nav-progress-seg ${idx < k5PhasesDoneCount ? 'filled' : ''}`} />
+          ))}
+        </div>
+      </div>
+      <div className="k5-nav-list">
+        {(() => {
+          let lastPhase = null;
+          return K5_NAV_ITEMS.map(item => {
+            const phase = item.toolKey ? K5_TOOL_PHASE[item.toolKey] : null;
+            const showHeader = phase && phase !== lastPhase;
+            lastPhase = phase || lastPhase;
+            const locked = item.toolKey ? !gameState.toolAccess[item.toolKey] : false;
+            const done = item.toolKey ? gameState.completedMinigames.includes(item.toolKey) : false;
+            const isActive = item.id === k5CurrentModule.id;
+            const phaseComplete = showHeader && K5_NAV_ITEMS
+              .filter(i => i.toolKey && K5_TOOL_PHASE[i.toolKey] === phase)
+              .every(i => gameState.completedMinigames.includes(i.toolKey));
+            return (
+              <React.Fragment key={item.id}>
+                {showHeader && (
+                  <div className={`k5-nav-phase-header ${phaseComplete ? 'k5-nav-phase-done' : ''}`}>
+                    {phaseComplete ? '✅ ' : ''}{K5_PHASE_LABELS[phase]}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className={`k5-nav-item ${isActive ? 'active' : ''} ${locked ? 'locked' : ''}`}
+                  onClick={() => runQuickCommand(item.cmd)}
+                  title={locked && item.toolKey ? K5_UNLOCK_HINT[item.toolKey] : undefined}
+                >
+                  <span className="k5-nav-icon">{item.icon}</span>
+                  <span className="k5-nav-label-stack">
+                    <span className="k5-nav-label">{item.label}</span>
+                    {locked && item.toolKey && (
+                      <span className="k5-nav-unlock-hint">{K5_UNLOCK_HINT[item.toolKey]}</span>
+                    )}
+                  </span>
+                  {done && <span className="k5-nav-done" title="Completed">✅</span>}
+                  {locked && <span className="k5-nav-lock" title="Locked">🔒</span>}
+                </button>
+              </React.Fragment>
+            );
+          });
+        })()}
+        {k5AllDone && (
+          <div className="k5-nav-phase-header k5-nav-case-closed">🏆 Case Closed</div>
+        )}
+      </div>
+      <div className="k5-nav-footer">
+        <button type="button" className="k5-nav-utility" onClick={() => runQuickCommand('hint')}>💡 Hint</button>
+        <button type="button" className="k5-nav-utility" onClick={() => runQuickCommand('help')}>❓ Help</button>
+      </div>
+    </div>
+  );
+
+  // K-5 cinematic boot intro — plays before the real terminal mounts.
+  if (ageTier === 'k5' && !k5IntroDone) {
+    const introLine = k5IntroScript[k5IntroStep] || k5IntroScript[0];
+    const awaitingTap = !!introLine.waitForTap;
+    return (
+      <div className="terminal-container tier-k5">
+        <div
+          className={`k5-intro-overlay ${awaitingTap ? 'k5-intro-tappable' : ''}`}
+          onClick={() => { if (awaitingTap) k5IntroAdvanceRef.current?.(); }}
+        >
+          <div className="k5-intro-scanlines" />
+          <div className="k5-intro-stage">
+            <div
+              key={k5IntroStep}
+              className={`k5-intro-line k5-intro-${introLine.tone || 'system'} ${awaitingTap ? 'k5-intro-hold' : ''}`}
+            >
+              {introLine.text}
+            </div>
+            {awaitingTap && <div className="k5-intro-tap-hint">👆 Tap / click to continue</div>}
+          </div>
+          <div className="k5-intro-progress">
+            {k5IntroScript.map((_, i) => (
+              <span key={i} className={`k5-intro-dot ${i <= k5IntroStep ? 'filled' : ''}`} />
+            ))}
+          </div>
+          <button type="button" className="k5-intro-skip" onClick={(e) => { e.stopPropagation(); k5FinishIntro(); }}>
+            Skip ▶
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="terminal-container">
+    <div className={`terminal-container tier-${ageTier}`}>
+      {ageTier === 'k5' && k5Cutscene && (
+        <div
+          className="k5-cutscene-overlay"
+          onClick={() => { if (k5Cutscene.label !== 'Case Closed') setK5Cutscene(null); }}
+        >
+          <div className={`k5-cutscene-card ${k5Cutscene.label === 'Case Closed' ? 'k5-cutscene-debrief' : ''}`}>
+            <div className="k5-cutscene-icon">{k5Cutscene.icon}</div>
+            <div className="k5-cutscene-eyebrow">{k5Cutscene.eyebrow}</div>
+            <div className="k5-cutscene-label">{k5Cutscene.label}</div>
+            <div className="k5-cutscene-blurb">{k5Cutscene.blurb}</div>
+            {k5Cutscene.label === 'Case Closed' ? (
+              <>
+                <div className="k5-debrief-recap">
+                  {K5_NAV_ITEMS.filter(i => i.toolKey).map(i => (
+                    <div key={i.id} className="k5-debrief-row">
+                      <span>✅ {i.icon} {i.label}</span>
+                    </div>
+                  ))}
+                  <div className="k5-debrief-badge">🎖️ {getTierMeta('k5').badgeAward}</div>
+                </div>
+                <div className="k5-debrief-actions">
+                  <button
+                    type="button"
+                    className="k5-debrief-btn"
+                    onClick={(e) => { e.stopPropagation(); setK5Cutscene(null); runQuickCommand('mission'); }}
+                  >
+                    🎯 Mission Recap
+                  </button>
+                  <button
+                    type="button"
+                    className="k5-debrief-btn k5-debrief-btn-secondary"
+                    onClick={(e) => { e.stopPropagation(); setK5Cutscene(null); }}
+                  >
+                    ✕ Close
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="k5-cutscene-hint">Tap anywhere to continue</div>
+            )}
+          </div>
+        </div>
+      )}
+      {k5NavSidebar}
       <div className="terminal-wrapper">
         <div className="terminal-header">
           <div className="terminal-title">
             <span className="terminal-icon">⚡</span>
-            <span className="terminal-name">SHADOWNET TERMINAL v2.1.3</span>
+            <span className="terminal-name">
+              {ageTier === 'k5' ? 'AEGIS VAULT' : ageTier === 'middle' ? 'AEGIS VAULT · Analyst' : 'SHADOWNET TERMINAL v2.1.3'}
+            </span>
             <span className="connection-status">● SECURE CONNECTION</span>
           </div>
           <div className="terminal-stats">
@@ -3663,10 +4749,18 @@ Good luck, shadow.
         </div>
 
         <div className="terminal-body">
-          <div 
-            className="terminal-output" 
+          {ageTier === 'k5' && (
+            <div className="k5-breadcrumb">
+              <span className="k5-breadcrumb-icon">{k5CurrentModule.icon}</span>
+              <span className="k5-breadcrumb-label">{k5CurrentModule.label}</span>
+            </div>
+          )}
+
+          <div
+            className={`terminal-output ${ageTier === 'k5' ? 'k5-activity-log' : ''}`}
             ref={outputRef}
           >
+            {ageTier === 'k5' && <div className="k5-log-heading">📜 Activity Log</div>}
             {output.map((line, index) => (
               <div key={index} className={`output-line ${line.type || 'default'}`}>
                 {line.text}
@@ -3674,11 +4768,21 @@ Good luck, shadow.
             ))}
           </div>
 
+          {ageTier !== 'high' && ageTier !== 'k5' && (
+            <div className="quick-command-bar">
+              <button type="button" className="quick-cmd-btn" onClick={() => runQuickCommand('mission', false)}>mission</button>
+              <button type="button" className="quick-cmd-btn" onClick={() => runQuickCommand('scan', false)}>scan</button>
+              <button type="button" className="quick-cmd-btn" onClick={() => runQuickCommand('status', false)}>status</button>
+              <button type="button" className="quick-cmd-btn" onClick={() => runQuickCommand('hint', false)}>hint</button>
+              <button type="button" className="quick-cmd-btn" onClick={() => runQuickCommand('help', false)}>help</button>
+            </div>
+          )}
+
           <div className="terminal-input-line">
             <span className="terminal-prompt">
-              <span className="user">shadownet</span>
+              <span className="user">{ageTier === 'k5' ? 'cadet' : 'shadownet'}</span>
               <span className="separator">@</span>
-              <span className="host">penetest</span>
+              <span className="host">{ageTier === 'k5' ? 'academy' : 'penetest'}</span>
               <span className="path">:~$</span>
             </span>
             <input
@@ -3695,6 +4799,8 @@ Good luck, shadow.
           </div>
         </div>
       </div>
+
+      {cyberHqPanel}
 
       {minigameOverlay}
     </div>

@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Terminal from './components/Terminal';
+import SOCLab from './components/SOCLab';
+import BlackSignal from './components/BlackSignal';
 import DevModeOverlay from './components/DevModeOverlay';
+import HomeScreen from './components/HomeScreen';
+import { AEGIS_TAGLINE, AEGIS_VAULT } from './data/aegisUniverse';
 import './styles/terminal.css';
+import './styles/soclab.css';
+import './styles/blacksignal.css';
+import './styles/vault-home.css';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -9,6 +16,7 @@ function App() {
   const [loadingStage, setLoadingStage] = useState('');
   const [loadingSubtext, setLoadingSubtext] = useState('');
   const [devModeOpen, setDevModeOpen] = useState(false);
+  const [ageTier, setAgeTier] = useState(null);
 
   // Fix for 100vh issues in Electron/Linux
   useEffect(() => {
@@ -38,41 +46,38 @@ function App() {
 
   // Enhanced loading sequence with more detailed feedback
   useEffect(() => {
+    // Neutral, all-ages "spinning up the lab" flavor — the tier hasn't been
+    // picked yet at this point, so nothing here should read as criminal/dark.
     const loadingStages = [
-      { 
-        stage: 'Initializing quantum encryption protocols...', 
-        subtext: 'Establishing secure quantum tunneling',
-        duration: 800 
+      {
+        stage: 'Opening AEGIS VAULT...',
+        subtext: 'Secure training archive — isolated simulations only',
+        duration: 800
       },
-      { 
-        stage: 'Connecting to shadow network relays...', 
-        subtext: 'Routing through 7 proxy layers',
-        duration: 600 
+      {
+        stage: 'Mounting clearance wings...',
+        subtext: 'Explorer · Analyst · Operations',
+        duration: 600
       },
-      { 
-        stage: 'Masking digital fingerprint...', 
-        subtext: 'Spoofing MAC addresses and browser signatures',
-        duration: 700 
+      {
+        stage: 'Loading practice tools...',
+        subtext: 'Scanner, cipher lab, SOC console',
+        duration: 700
       },
-      { 
-        stage: 'Loading exploit frameworks...', 
-        subtext: 'Compiling custom attack vectors',
-        duration: 900 
+      {
+        stage: 'Spinning up training sectors...',
+        subtext: 'TechCorp sim · Meridian Health assignment',
+        duration: 900
       },
-      { 
-        stage: 'Bypassing corporate firewalls...', 
-        subtext: 'Testing intrusion detection evasion',
-        duration: 500 
+      {
+        stage: 'Calibrating PIXEL...',
+        subtext: 'Teacher → mentor → SOC interface',
+        duration: 500
       },
-      { 
-        stage: 'Establishing encrypted communications...', 
-        subtext: 'Securing command and control channels',
-        duration: 400 
-      },
-      { 
-        stage: 'Granting shadow access...', 
-        subtext: 'Welcome to the underground, operative',
-        duration: 600 
+      {
+        stage: 'Vault doors unlocked.',
+        subtext: AEGIS_TAGLINE,
+        duration: 600
       }
     ];
 
@@ -108,8 +113,8 @@ function App() {
       <div className="loading-screen">
         <div className="loading-content">
           <div className="loading-header">
-            <h1 className="loading-title">🔒 SHADOW NETWORK ACCESS</h1>
-            <div className="loading-subtitle">Cybersecurity Training Simulator</div>
+            <h1 className="loading-title">⬡ {AEGIS_VAULT.name}</h1>
+            <div className="loading-subtitle">{AEGIS_VAULT.subtitle}</div>
           </div>
           
           <div className="loading-progress-container">
@@ -129,7 +134,7 @@ function App() {
           
           <div className="loading-disclaimer">
             <p>🎓 Educational cybersecurity simulation</p>
-            <p>⚖️ For learning purposes only - Practice ethical hacking</p>
+            <p>🧪 A safe, isolated lab - nothing here touches a real system</p>
           </div>
         </div>
         
@@ -141,11 +146,30 @@ function App() {
     );
   }
 
+  if (!ageTier) {
+    return <HomeScreen onSelect={setAgeTier} />;
+  }
+
+  if (ageTier === 'black-signal') {
+    return (
+      <>
+        <BlackSignal onExit={() => setAgeTier(null)} />
+        <DevModeOverlay isOpen={devModeOpen} onClose={() => setDevModeOpen(false)} />
+      </>
+    );
+  }
+
   return (
-    <div className="app">
-      <Terminal />
+    <>
+      {ageTier === 'high' ? (
+        <SOCLab />
+      ) : (
+        <div className="app">
+          <Terminal ageTier={ageTier} />
+        </div>
+      )}
       <DevModeOverlay isOpen={devModeOpen} onClose={() => setDevModeOpen(false)} />
-    </div>
+    </>
   );
 }
 

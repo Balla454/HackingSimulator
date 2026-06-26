@@ -1,15 +1,50 @@
 import React, { useState } from 'react';
 
+// Age-tier tuning: fewer files and simpler ciphers for younger players
+const TIER_FILE_SETTINGS = {
+  k5: { maxFiles: 3 },
+  middle: { maxFiles: 5 },
+  high: { maxFiles: 7 }
+};
+
+const ALL_ENCRYPTED_FILES = [
+  { id: 1, name: 'financial_records.enc', type: 'Financial Data', key: 'BASE64_DECODE' },
+  { id: 3, name: 'blueprints.enc', type: 'Product Designs', key: 'HEX_DECODE' },
+  { id: 2, name: 'employee_data.enc', type: 'HR Records', key: 'CAESAR_SHIFT' },
+  { id: 4, name: 'admin_config.enc', type: 'System Config', key: 'BINARY_DECODE' },
+  { id: 5, name: 'network_logs.enc', type: 'Security Logs', key: 'MORSE_DECODE' },
+  { id: 6, name: 'secrets.enc', type: 'Classified Data', key: 'ATBASH_CIPHER' },
+  { id: 7, name: 'passwords.enc', type: 'Credential Store', key: 'CRYPTO_KEY' }
+];
+
+// K-5: friendly locked files — kids unlock with any key they've found, no scary themes
+const K5_LOCKED_FILES = [
+  { id: 1, name: 'my_diary.locked', type: 'Secret Diary', emoji: '📔' },
+  { id: 2, name: 'game_save.locked', type: 'Saved Game', emoji: '🎮' },
+  { id: 3, name: 'treasure_map.locked', type: 'Treasure Map', emoji: '🗺️' },
+  { id: 4, name: 'pet_photos.locked', type: 'Pet Photo Album', emoji: '🐶' }
+];
+
+const getKeyRank = (unlocked, total) => {
+  if (unlocked >= total) return '🏆 Vault Hero!';
+  if (unlocked >= Math.ceil(total / 2)) return '🥈 Key Master';
+  return '🥉 Key Apprentice';
+};
+
 const FileDecryptor = ({ gameState, onDecryptComplete, addOutput }) => {
-  const [encryptedFiles] = useState([
-    { id: 1, name: 'financial_records.enc', type: 'Financial Data', key: 'BASE64_DECODE' },
-    { id: 2, name: 'employee_data.enc', type: 'HR Records', key: 'CAESAR_SHIFT' },
-    { id: 3, name: 'blueprints.enc', type: 'Product Designs', key: 'HEX_DECODE' },
-    { id: 4, name: 'admin_config.enc', type: 'System Config', key: 'BINARY_DECODE' },
-    { id: 5, name: 'network_logs.enc', type: 'Security Logs', key: 'MORSE_DECODE' },
-    { id: 6, name: 'secrets.enc', type: 'Classified Data', key: 'ATBASH_CIPHER' },
-    { id: 7, name: 'passwords.enc', type: 'Credential Store', key: 'CRYPTO_KEY' }
-  ]);
+  const ageTier = gameState?.ageTier || 'middle';
+  const isK5 = ageTier === 'k5';
+  const fileTierSettings = TIER_FILE_SETTINGS[ageTier] || TIER_FILE_SETTINGS.middle;
+  const [encryptedFiles] = useState(
+    ALL_ENCRYPTED_FILES.slice(0, fileTierSettings.maxFiles)
+  );
+
+  // K-5 simplified state
+  const [k5File, setK5File] = useState(null);
+  const [k5Unlocked, setK5Unlocked] = useState(false);
+  const [k5Key, setK5Key] = useState(null);
+  const [k5UnlockedIds, setK5UnlockedIds] = useState([]);
+  const [k5SessionDone, setK5SessionDone] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [decryptionKey, setDecryptionKey] = useState('');
   const [progress, setProgress] = useState(0);
@@ -126,6 +161,122 @@ const FileDecryptor = ({ gameState, onDecryptComplete, addOutput }) => {
   };
 
   const availableKeys = getAllAvailableKeys();
+
+  if (isK5) {
+    const k5UseKey = (keyData) => {
+      setK5Key(keyData);
+      setK5Unlocked(true);
+      setK5UnlockedIds(ids => [...ids, k5File.id]);
+      addOutput && addOutput(`🔑 Unlocked ${k5File.name} with ${keyData.key}!`);
+    };
+
+    const k5RemainingFiles = K5_LOCKED_FILES.filter(f => !k5UnlockedIds.includes(f.id));
+
+    const k5TryAnother = () => {
+      setK5File(null);
+      setK5Unlocked(false);
+      setK5Key(null);
+    };
+
+    const k5Finish = () => {
+      setK5SessionDone(true);
+      setTimeout(() => {
+        onDecryptComplete({ name: k5File.name, type: k5File.type, unlocked: k5UnlockedIds.length });
+      }, 1200);
+    };
+
+    if (k5SessionDone) {
+      return (
+        <div className="minigame tier-k5">
+          <div className="k5-complete">
+            <div className="k5-byte-row">
+              <div className="k5-byte-avatar">🕵️</div>
+              <div className="k5-byte-bubble">Every lock you tried, you opened — well done, Detective! 🎉</div>
+            </div>
+            <div className="k5-complete-title">🎉 Great job, Key Detective!</div>
+            <div className="k5-complete-score">You unlocked {k5UnlockedIds.length} of {K5_LOCKED_FILES.length} files!</div>
+            <div className="k5-complete-rank">{getKeyRank(k5UnlockedIds.length, K5_LOCKED_FILES.length)}</div>
+            <div className="k5-complete-tip">Keys should always stay private — only use them to unlock your own stuff.</div>
+            <div className="k5-learned">📋 What You Learned: This is called <strong>DECRYPTION</strong> — using the right key to unlock protected information, just like a house key opens your own front door (and only your front door).</div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="minigame tier-k5">
+        <h3 className="k5-crypto-title">🔑 Decryption: Unlock the File</h3>
+        {k5UnlockedIds.length === 0 && !k5File && (
+          <>
+            <p className="k5-instructions">Pick a locked file, then use one of your keys to open it safely. 🔓</p>
+            <div className="k5-tip">🧠 Cyber Term: <strong>Decryption</strong> means using the right key to unlock scrambled (encrypted) information — like using your own house key, not a stranger's. Keys and passwords should only ever open things that are yours!</div>
+            <div className="k5-practice-banner">🎮 This is practice! It's totally okay to try a key that doesn't fit — that's how we learn.</div>
+          </>
+        )}
+
+        <div className="k5-byte-row">
+          <div className="k5-byte-avatar">🕵️</div>
+          <div className="k5-byte-bubble">{!k5File ? "Pick a locked file and let's see what's inside! 🔒" : !k5Unlocked ? 'Try one of your keys — see which one fits!' : 'Nice unlock! 🌟'}</div>
+        </div>
+
+        {!k5File ? (
+          <>
+            <div className="k5-file-grid">
+              {k5RemainingFiles.map(file => (
+                <div key={file.id} className="k5-email-card k5-file-card k5-locked-card" onClick={() => setK5File(file)}>
+                  <div className="k5-lock-badge">🔒</div>
+                  <div className="k5-email-row">{file.emoji} <strong>{file.name}</strong></div>
+                  <div className="k5-email-body">{file.type}</div>
+                </div>
+              ))}
+            </div>
+            {k5UnlockedIds.length > 0 && (
+              <div className="k5-answer-buttons">
+                <button className="k5-next-btn" onClick={k5Finish}>🏁 I'm Done — See My Rank</button>
+              </div>
+            )}
+          </>
+        ) : !k5Unlocked ? (
+          <>
+            <div className="k5-email-card">
+              <div className="k5-email-row">{k5File.emoji} <strong>{k5File.name}</strong></div>
+              <div className="k5-email-body">{k5File.type} — locked!</div>
+            </div>
+            {availableKeys.length > 0 ? (
+              <>
+                <p className="k5-instructions">Choose a key to try:</p>
+                <div className="k5-answer-buttons">
+                  {availableKeys.map((keyData, index) => (
+                    <button key={index} className="k5-safe-btn" onClick={() => k5UseKey(keyData)}>
+                      {keyData.icon} {keyData.key}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="k5-feedback info">
+                <div className="k5-feedback-why">You don't have any keys yet! Go solve a code or crack a password to find one. 🔍</div>
+              </div>
+            )}
+            <div className="k5-answer-buttons">
+              <button className="k5-next-btn" onClick={() => setK5File(null)}>⬅️ Back to Files</button>
+            </div>
+          </>
+        ) : (
+          <div className="k5-feedback success">
+            <div className="k5-feedback-title">🌟 File Unlocked!</div>
+            <div className="k5-feedback-why">You opened {k5File.name} using the {k5Key?.key} key!</div>
+            <div className="k5-answer-buttons">
+              {k5RemainingFiles.length > 0 ? (
+                <button className="k5-next-btn" onClick={k5TryAnother}>🔓 Unlock Another File</button>
+              ) : null}
+              <button className="k5-next-btn" onClick={k5Finish}>🏁 I'm Done — See My Rank</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="minigame">

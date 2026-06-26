@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
+// Age-tier tuning: K-5 gets far more attempts/time and full hints up front,
+// middle school is the original balanced experience, high school is tighter.
+const TIER_SETTINGS = {
+  k5: { attemptsMult: 2.5, timeMult: 2.5, maxDifficulty: 3, showAllHints: true },
+  middle: { attemptsMult: 1, timeMult: 1, maxDifficulty: 5, showAllHints: false },
+  high: { attemptsMult: 0.7, timeMult: 0.65, maxDifficulty: 5, showAllHints: false }
+};
+
 const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameState }) => {
+  const ageTier = gameState?.ageTier || 'middle';
+  const isK5 = ageTier === 'k5';
+  const tierSettings = TIER_SETTINGS[ageTier] || TIER_SETTINGS.middle;
   const [currentStep, setCurrentStep] = useState('target_selection');
   const [target, setTarget] = useState(null);
   const [attackMethod, setAttackMethod] = useState('');
@@ -205,7 +216,9 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
       deviceData: device
     })) || [];
 
-    return [...baseTargets, ...deviceTargets];
+    const allTargets = [...baseTargets, ...deviceTargets];
+    // Cap difficulty for younger players so passwords stay short and guessable
+    return allTargets.filter(t => t.difficulty <= tierSettings.maxDifficulty);
   };
 
   const targets = generateTargets();
@@ -214,53 +227,69 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
     {
       id: 'brute-force',
       name: 'Brute Force Attack',
+      k5Name: 'Try Everything',
       description: 'Systematically try all possible character combinations',
+      k5Description: 'Keep trying different words until one works',
       icon: '💪',
       speed: 50,
       accuracy: 100,
       complexity: 'High CPU Usage',
       effectiveness: { 1: 95, 2: 80, 3: 60, 4: 30, 5: 10 },
       pros: ['Guaranteed success given time', 'Works on any password'],
+      k5Pros: ['Will work on any password!', 'Always finds it eventually'],
       cons: ['Very slow for complex passwords', 'High resource usage'],
+      k5Cons: ['Might take a long time', 'Uses lots of power'],
       estimatedTime: 'Minutes to hours'
     },
     {
       id: 'dictionary',
       name: 'Dictionary Attack',
+      k5Name: 'Use Common Words',
       description: 'Use common passwords and known patterns',
+      k5Description: 'Try words people use all the time',
       icon: '📚',
       speed: 200,
       accuracy: 70,
       complexity: 'Low CPU Usage',
       effectiveness: { 1: 90, 2: 85, 3: 50, 4: 20, 5: 5 },
       pros: ['Fast for common passwords', 'Low resource usage'],
+      k5Pros: ['Super fast!', 'Doesn\'t use much power'],
       cons: ['Ineffective against complex passwords', 'Limited wordlist'],
+      k5Cons: ['Won\'t work on tricky passwords', 'Need the right word list'],
       estimatedTime: 'Seconds to minutes'
     },
     {
       id: 'rainbow-table',
       name: 'Rainbow Table Lookup',
+      k5Name: 'Look It Up',
       description: 'Use precomputed hash tables for instant cracking',
+      k5Description: 'Look the password up in a big list',
       icon: '🌈',
       speed: 500,
       accuracy: 60,
       complexity: 'High Memory Usage',
       effectiveness: { 1: 80, 2: 70, 3: 40, 4: 15, 5: 5 },
       pros: ['Extremely fast when hash found', 'No computation needed'],
+      k5Pros: ['Lightning fast!', 'No waiting'],
       cons: ['Requires pre-built tables', 'Storage intensive'],
+      k5Cons: ['Need the right list', 'Uses lots of space'],
       estimatedTime: 'Instant to minutes'
     },
     {
       id: 'hybrid',
       name: 'Hybrid Attack',
+      k5Name: 'Mix and Match',
       description: 'Combine dictionary words with common mutations',
+      k5Description: 'Try words with small changes mixed in',
       icon: '🔄',
       speed: 150,
       accuracy: 80,
       complexity: 'Medium CPU Usage',
       effectiveness: { 1: 85, 2: 75, 3: 65, 4: 40, 5: 15 },
       pros: ['Good balance of speed and coverage', 'Catches common variations'],
+      k5Pros: ['Good balance!', 'Catches smart password changes'],
       cons: ['May miss truly random passwords', 'Moderate resource usage'],
+      k5Cons: ['Might miss random passwords', 'Needs some power'],
       estimatedTime: 'Minutes to hours'
     }
   ], []);
@@ -366,8 +395,8 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
     
     // Calculate failure conditions based on target difficulty and method effectiveness
     const effectiveness = getMethodEffectiveness(attackMethods.find(m => m.id === 'brute-force'), target.difficulty);
-    const maxAttempts = Math.floor(2000 / (effectiveness / 100)); // Harder targets need more attempts
-    const timeLimit = target.difficulty * 30; // 30 seconds per difficulty level
+    const maxAttempts = Math.floor((2000 / (effectiveness / 100)) * tierSettings.attemptsMult); // Harder targets need more attempts
+    const timeLimit = target.difficulty * 30 * tierSettings.timeMult; // 30 seconds per difficulty level
     
     // Check for failure conditions
     if (newAttempts >= maxAttempts || timeElapsed >= timeLimit) {
@@ -400,8 +429,8 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
     
     // Calculate failure conditions for dictionary attack
     const effectiveness = getMethodEffectiveness(attackMethods.find(m => m.id === 'dictionary'), target.difficulty);
-    const maxAttempts = Math.floor(500 / (effectiveness / 100)); // Dictionary has fewer attempts
-    const timeLimit = target.difficulty * 10; // Faster but more likely to fail on complex passwords
+    const maxAttempts = Math.floor((500 / (effectiveness / 100)) * tierSettings.attemptsMult); // Dictionary has fewer attempts
+    const timeLimit = target.difficulty * 10 * tierSettings.timeMult; // Faster but more likely to fail on complex passwords
     
     // Check for failure conditions
     if (newAttempts >= maxAttempts || timeElapsed >= timeLimit) {
@@ -428,8 +457,8 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
     
     // Calculate failure conditions for rainbow table attack
     const effectiveness = getMethodEffectiveness(attackMethods.find(m => m.id === 'rainbow-table'), target.difficulty);
-    const maxAttempts = Math.floor(100 / (effectiveness / 100)); // Rainbow tables are fast but limited
-    const timeLimit = target.difficulty * 5; // Very fast but fails quickly if hash not found
+    const maxAttempts = Math.floor((100 / (effectiveness / 100)) * tierSettings.attemptsMult); // Rainbow tables are fast but limited
+    const timeLimit = target.difficulty * 5 * tierSettings.timeMult; // Very fast but fails quickly if hash not found
     
     // Check for failure conditions
     if (newAttempts >= maxAttempts || timeElapsed >= timeLimit) {
@@ -454,8 +483,8 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
     
     // Calculate failure conditions for hybrid attack
     const effectiveness = getMethodEffectiveness(attackMethods.find(m => m.id === 'hybrid'), target.difficulty);
-    const maxAttempts = Math.floor(1000 / (effectiveness / 100)); // Balanced approach
-    const timeLimit = target.difficulty * 20; // Moderate time limit
+    const maxAttempts = Math.floor((1000 / (effectiveness / 100)) * tierSettings.attemptsMult); // Balanced approach
+    const timeLimit = target.difficulty * 20 * tierSettings.timeMult; // Moderate time limit
     
     // Check for failure conditions
     if (newAttempts >= maxAttempts || timeElapsed >= timeLimit) {
@@ -567,15 +596,15 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
   };
 
   return (
-    <div className="password-cracker-enhanced">
+    <div className={`password-cracker-enhanced${isK5 ? ' tier-k5' : ''}`}>
       {/* Header with Progress Steps */}
       <div className="pc-header-enhanced">
         <div className="mission-badge">
           <span className="mission-icon">🔓</span>
           <div className="mission-info">
-            <h2>💻 Password Cracking Operations</h2>
-            <div className="mission-title">Credential Access & Recovery</div>
-            <div className="mission-scenario">Extract authentication credentials from target systems</div>
+            <h2>{isK5 ? '🔑 Guess the Password' : '💻 Password Cracking Operations'}</h2>
+            <div className="mission-title">{isK5 ? 'Test a weak password' : 'Credential Access & Recovery'}</div>
+            <div className="mission-scenario">{isK5 ? "Some passwords are easy to guess! Let's find out which ones." : 'Extract authentication credentials from target systems'}</div>
           </div>
         </div>
         
@@ -604,8 +633,8 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
       {currentStep === 'target_selection' && (
         <div className="step-content">
           <div className="step-header">
-            <h3>🎯 Select Password Target</h3>
-            <p>Choose a system or account to attempt password cracking. Consider the security level and estimated crack time.</p>
+            <h3>{isK5 ? '🎯 Pick Something to Test' : '🎯 Select Password Target'}</h3>
+            <p>{isK5 ? 'Click on an account below to try guessing its password.' : "Choose a system or account to attempt password cracking. Consider the security level and estimated crack time."}</p>
           </div>
           
           <div className="targets-enhanced-grid">
@@ -630,19 +659,21 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
                   
                   <div className="target-stats">
                     <div className="difficulty-rating">
-                      <span className="stat-label">Security Level:</span>
+                      <span className="stat-label">{isK5 ? 'How Tricky:' : 'Security Level:'}</span>
                       <div className="difficulty-display">
                         <div className="difficulty-stars">
                           {'🔒'.repeat(tgt.difficulty)}{'🔓'.repeat(5-tgt.difficulty)}
                         </div>
-                        <span className="difficulty-text" style={{ color: getDifficultyColor(tgt.difficulty) }}>
-                          Level {tgt.difficulty}
-                        </span>
+                        {!isK5 && (
+                          <span className="difficulty-text" style={{ color: getDifficultyColor(tgt.difficulty) }}>
+                            Level {tgt.difficulty}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    
+
                     <div className="estimated-time">
-                      <span className="stat-label">Est. Time:</span>
+                      <span className="stat-label">{isK5 ? 'Time to Guess:' : 'Est. Time:'}</span>
                       <span className="time-value">{tgt.estimatedTime}</span>
                     </div>
                   </div>
@@ -689,8 +720,8 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
       {currentStep === 'method_selection' && target && (
         <div className="step-content">
           <div className="step-header">
-            <h3>⚔️ Choose Attack Method</h3>
-            <p>Select a password cracking technique. Consider the target's security level and your time constraints.</p>
+            <h3>{isK5 ? '⚔️ Pick a Way to Guess' : '⚔️ Choose Attack Method'}</h3>
+            <p>{isK5 ? 'Different ways of guessing work better on different passwords. Pick one to try!' : "Select a password cracking technique. Consider the target's security level and your time constraints."}</p>
           </div>
 
           <div className="target-reminder">
@@ -715,49 +746,53 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
                   <div className="method-header">
                     <div className="method-icon-large">{method.icon}</div>
                     <div className="method-title">
-                      <h4>{method.name}</h4>
-                      <div className="method-complexity">{method.complexity}</div>
+                      <h4>{isK5 ? method.k5Name : method.name}</h4>
+                      {!isK5 && <div className="method-complexity">{method.complexity}</div>}
                     </div>
                   </div>
-                  
-                  <p className="method-description">{method.description}</p>
+
+                  <p className="method-description">{isK5 ? method.k5Description : method.description}</p>
                   
                   <div className="method-stats">
                     <div className="effectiveness-bar">
-                      <span className="stat-label">Effectiveness vs Level {target.difficulty}:</span>
+                      <span className="stat-label">{isK5 ? 'How well it works:' : `Effectiveness vs Level ${target.difficulty}:`}</span>
                       <div className="progress-bar">
-                        <div 
-                          className="progress-fill" 
+                        <div
+                          className="progress-fill"
                           style={{ width: `${effectiveness}%` }}
                         ></div>
                       </div>
                       <span className="percentage">{effectiveness}%</span>
                     </div>
-                    
-                    <div className="time-estimate">
-                      <span className="stat-label">Time Estimate:</span>
-                      <span className="time-value">{method.estimatedTime}</span>
-                    </div>
+
+                    {!isK5 && (
+                      <div className="time-estimate">
+                        <span className="stat-label">Time Estimate:</span>
+                        <span className="time-value">{method.estimatedTime}</span>
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="method-pros-cons">
-                    <div className="pros">
-                      <strong>Advantages:</strong>
-                      <ul>
-                        {method.pros.map((pro, index) => (
-                          <li key={index}>{pro}</li>
-                        ))}
-                      </ul>
+
+                  {(isK5 || !isK5) && (
+                    <div className="method-pros-cons">
+                      <div className="pros">
+                        <strong>{isK5 ? '✓ Good:' : 'Advantages:'}</strong>
+                        <ul>
+                          {(isK5 ? method.k5Pros : method.pros).map((pro, index) => (
+                            <li key={index}>{pro}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="cons">
+                        <strong>{isK5 ? '✗ Not so good:' : 'Limitations:'}</strong>
+                        <ul>
+                          {(isK5 ? method.k5Cons : method.cons).map((con, index) => (
+                            <li key={index}>{con}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                    <div className="cons">
-                      <strong>Limitations:</strong>
-                      <ul>
-                        {method.cons.map((con, index) => (
-                          <li key={index}>{con}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
+                  )}
                   
                   {isSelected && (
                     <div className="selection-indicator">
@@ -789,8 +824,8 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
             <div className="target-info-header">
               <span className="target-avatar-attack">{target.icon}</span>
               <div className="attack-title">
-                <h3>⚔️ Active Attack: {target.name}</h3>
-                <div className="method-badge">Method: {attackMethods.find(m => m.id === attackMethod)?.name}</div>
+                <h3>{isK5 ? `🔍 Guessing: ${target.name}` : `⚔️ Active Attack: ${target.name}`}</h3>
+                <div className="method-badge">{isK5 ? 'Using: ' : 'Method: '}{attackMethods.find(m => m.id === attackMethod)?.name}</div>
               </div>
             </div>
             
@@ -890,19 +925,19 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
         <div className="results-interface">
           <div className="results-header">
             <div className={`result-status-large ${results.success ? 'success' : 'failure'}`}>
-              {results.success ? '🔓 Password Cracked!' : '🔒 Attack Failed'}
+              {results.success ? (isK5 ? '🔓 You Found It!' : '🔓 Password Cracked!') : (isK5 ? '🔒 No Luck This Time' : '🔒 Attack Failed')}
             </div>
             <div className="result-summary">
-              {results.success ? 
-                `Successfully cracked password "${results.password}"` :
-                'Target password could not be determined'
+              {results.success ?
+                (isK5 ? `Great job! The password was "${results.password}"` : `Successfully cracked password "${results.password}"`) :
+                (isK5 ? "That one was too tricky - try a different one!" : 'Target password could not be determined')
               }
             </div>
           </div>
 
           <div className="results-analysis">
             <div className="analysis-section">
-              <h4>📊 Attack Analysis</h4>
+              <h4>{isK5 ? '📊 What Happened' : '📊 Attack Analysis'}</h4>
               <div className="analysis-grid">
                 <div className="analysis-item">
                   <span className="analysis-label">Target:</span>
@@ -933,7 +968,7 @@ const PasswordCracker = ({ onComplete, onPasswordCrackComplete, onFailure, gameS
 
             {results.success && (
               <div className="credentials-section">
-                <h4>🔑 Extracted Credentials</h4>
+                <h4>{isK5 ? '🔑 The Password' : '🔑 Extracted Credentials'}</h4>
                 <div className="credential-card">
                   <div className="credential-item">
                     <span className="credential-label">Target:</span>

@@ -1,11 +1,20 @@
 import React, { useState, useCallback, useMemo } from 'react';
 
-const SocialEngineering = ({ 
-  onComplete, 
+// Age-tier tuning: cap target difficulty and adjust how easily suspicion/trust tip the conversation
+const TIER_SOCIAL_SETTINGS = {
+  k5: { maxDifficulty: 2, suspicionThreshold: 85, trustThreshold: 65 },
+  middle: { maxDifficulty: 4, suspicionThreshold: 70, trustThreshold: 80 },
+  high: { maxDifficulty: 5, suspicionThreshold: 55, trustThreshold: 85 }
+};
+
+const SocialEngineering = ({
+  onComplete,
   target = null,
   phishingData = null,
   gameState = {}
 }) => {
+  const ageTier = gameState?.ageTier || 'middle';
+  const socialTierSettings = TIER_SOCIAL_SETTINGS[ageTier] || TIER_SOCIAL_SETTINGS.middle;
   const generateTargets = useCallback(() => {
     const baseTargets = [
       {
@@ -74,8 +83,8 @@ const SocialEngineering = ({
       }
     ];
 
-    return baseTargets;
-  }, []);
+    return baseTargets.filter(t => t.difficulty <= socialTierSettings.maxDifficulty);
+  }, [socialTierSettings]);
 
   const socialTargets = useMemo(() => generateTargets(), [generateTargets]);
   
@@ -280,15 +289,15 @@ const SocialEngineering = ({
     let responseText = '';
     let newChoices = [];
 
-    // Check if target is too suspicious
-    if (currentSuspicion > 70) {
+    // Check if target is too suspicious (threshold scaled by age tier)
+    if (currentSuspicion > socialTierSettings.suspicionThreshold) {
       responseText = "I'm sorry, but this doesn't feel right. I'm going to contact security and verify this through official channels.";
-      
+
       setTimeout(() => {
         finalizeSocialEngineering(false, 'High suspicion - target alerted security');
       }, 2000);
-      
-    } else if (currentTrust > 80 && conversationTurn > 1) {
+
+    } else if (currentTrust > socialTierSettings.trustThreshold && conversationTurn > 1) {
       // Success! Target is convinced
       const successResponses = {
         authority: `Of course! My credentials are ${selectedTarget.name.toLowerCase().replace(' ', '.')} and the password is "${selectedTarget.profile.interests[0]}2024!". Is there anything else you need for the audit?`,

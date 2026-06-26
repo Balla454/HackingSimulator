@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 
+// Age-tier tuning: more breach attempts and a friendlier success-chance bonus for K-5
+const TIER_FIREWALL_SETTINGS = {
+  k5: { maxAttempts: 6, successBonus: 25 },
+  middle: { maxAttempts: 3, successBonus: 0 },
+  high: { maxAttempts: 2, successBonus: -10 }
+};
+
 const FirewallBreach = ({ gameState, onFirewallComplete, addOutput, targetIp }) => {
+  const ageTier = gameState?.ageTier || 'middle';
+  const firewallTierSettings = TIER_FIREWALL_SETTINGS[ageTier] || TIER_FIREWALL_SETTINGS.middle;
   const [firewallCode, setFirewallCode] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [status, setStatus] = useState('');
@@ -119,7 +128,7 @@ const FirewallBreach = ({ gameState, onFirewallComplete, addOutput, targetIp }) 
     const newAttempts = attempts + 1;
     setAttempts(newAttempts);
     
-    if (newAttempts > 3) {
+    if (newAttempts > firewallTierSettings.maxAttempts) {
       setStatus('FIREWALL LOCKED: Too many failed attempts');
       addOutput(`Firewall breach failed on ${targetIp} - locked out`);
       return;
@@ -136,9 +145,9 @@ const FirewallBreach = ({ gameState, onFirewallComplete, addOutput, targetIp }) 
           clearInterval(interval);
           setIsBreaching(false);
           
-          // Calculate success chance based on method and intelligence
-          let successChance = selectedMethod.success;
-          
+          // Calculate success chance based on method, intelligence, and age tier
+          let successChance = selectedMethod.success + firewallTierSettings.successBonus;
+
           if (useIntelligence && gameState.compromisedDevices?.length > 0) {
             successChance += 20;
           }
@@ -146,7 +155,7 @@ const FirewallBreach = ({ gameState, onFirewallComplete, addOutput, targetIp }) 
             successChance += 15;
           }
           
-          successChance = Math.min(successChance, 95);
+          successChance = Math.max(5, Math.min(successChance, 95));
           
           if (Math.random() * 100 < successChance || firewallCode === pattern) {
             setStatus('FIREWALL BREACHED! Network access gained');

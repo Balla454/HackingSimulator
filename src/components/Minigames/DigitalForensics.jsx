@@ -1,6 +1,93 @@
 import React, { useState, useEffect } from 'react';
 
+// Age-tier tuning: how fast analysis progresses (higher = faster for younger players)
+const TIER_FORENSICS_SETTINGS = {
+  k5: { speedMult: 1.6 },
+  middle: { speedMult: 1 },
+  high: { speedMult: 0.7 }
+};
+
+// K-5: friendly "detective" mysteries — no malware/exfiltration/stolen-credential content
+const K5_MYSTERIES = [
+  {
+    id: 'backpack',
+    name: 'Mystery Backpack',
+    emoji: '🎒',
+    description: 'Someone left this backpack in the hallway. Investigate it for clues!',
+    clues: ['A library book due next Tuesday', 'A note that says "Meet at the swings"', 'A name tag that\'s smudged but starts with "J"']
+  },
+  {
+    id: 'computer',
+    name: 'Classroom Computer',
+    emoji: '🖥️',
+    description: 'The classroom computer was left logged in. What can you find out?',
+    clues: ['It was last used at 2:15 PM', 'The last website open was about dinosaurs', 'A saved document called "My Story"']
+  },
+  {
+    id: 'photo',
+    name: 'Mystery Photo',
+    emoji: '📷',
+    description: 'A photo was found on the playground. Look closely for details!',
+    clues: ['A red kite in the background', 'A clock on a building reads 3:00', 'Someone wearing a green backpack']
+  },
+  {
+    id: 'lunchbox',
+    name: 'Mystery Lunchbox',
+    emoji: '🍱',
+    description: 'A lunchbox was left behind with no name on it. Can you figure out whose it is?',
+    clues: ['A peanut butter sandwich, still wrapped', 'A note that says "Save room for recess!"', 'A doodle of a soccer ball on the lid']
+  }
+];
+
+const getDetectiveRank = (solved, total) => {
+  if (solved >= total) return '🏆 Master Detective!';
+  if (solved >= Math.ceil(total / 2)) return '🥈 Detective';
+  return '🥉 Junior Detective';
+};
+
 const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }) => {
+  const ageTier = gameState?.ageTier || 'middle';
+  const isK5 = ageTier === 'k5';
+  const forensicsTierSettings = TIER_FORENSICS_SETTINGS[ageTier] || TIER_FORENSICS_SETTINGS.middle;
+
+  // K-5 simplified state
+  const [k5Mystery, setK5Mystery] = useState(null);
+  const [k5CluesFound, setK5CluesFound] = useState([]);
+  const [k5Investigating, setK5Investigating] = useState(false);
+  const [k5Done, setK5Done] = useState(false);
+  const [k5SolvedIds, setK5SolvedIds] = useState([]);
+  const [k5SessionDone, setK5SessionDone] = useState(false);
+
+  const k5Investigate = (mystery) => {
+    setK5Mystery(mystery);
+    setK5CluesFound([]);
+    setK5Investigating(true);
+    let i = 0;
+    const interval = setInterval(() => {
+      setK5CluesFound(prev => [...prev, mystery.clues[i]]);
+      addOutput && addOutput(`🔍 Clue found: ${mystery.clues[i]}`);
+      i++;
+      if (i >= mystery.clues.length) {
+        clearInterval(interval);
+        setK5Investigating(false);
+        setK5Done(true);
+        setK5SolvedIds(ids => [...ids, mystery.id]);
+      }
+    }, 900 / (forensicsTierSettings.speedMult || 1));
+  };
+
+  const k5NextCase = () => {
+    setK5Mystery(null);
+    setK5CluesFound([]);
+    setK5Done(false);
+  };
+
+  const k5FinishCases = () => {
+    setK5SessionDone(true);
+    setTimeout(() => {
+      onForensicComplete({ artifact: k5Mystery.name, findings: k5Mystery.clues, timestamp: new Date().toISOString(), solved: k5SolvedIds.length });
+    }, 1200);
+  };
   // Enhanced forensic artifacts with realistic data
   const forensicArtifacts = [
     { 
@@ -133,8 +220,8 @@ const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }
     // Phase 1: Scanning
     const scanInterval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + Math.random() * 8 + 2;
-        
+        const newProgress = prev + (Math.random() * 8 + 2) * forensicsTierSettings.speedMult;
+
         if (newProgress >= 30) {
           clearInterval(scanInterval);
           setStatus('Scanning complete. Extracting evidence...');
@@ -153,8 +240,8 @@ const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }
     
     const extractInterval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + Math.random() * 6 + 3;
-        
+        const newProgress = prev + (Math.random() * 6 + 3) * forensicsTierSettings.speedMult;
+
         // Reveal evidence progressively
         if (evidenceIndex < evidenceKeys.length && newProgress > 30 + (evidenceIndex * 20)) {
           const evidenceType = evidenceKeys[evidenceIndex];
@@ -180,8 +267,8 @@ const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }
   const startAnalysis = () => {
     const analysisInterval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + Math.random() * 5 + 2;
-        
+        const newProgress = prev + (Math.random() * 5 + 2) * forensicsTierSettings.speedMult;
+
         if (newProgress >= 100) {
           clearInterval(analysisInterval);
           setAnalysisPhase('complete');
@@ -247,6 +334,95 @@ const DigitalForensics = ({ onForensicComplete, addOutput, artifact, gameState }
     
     return findings;
   };
+
+  if (isK5) {
+    const k5RemainingMysteries = K5_MYSTERIES.filter(m => !k5SolvedIds.includes(m.id));
+
+    if (k5SessionDone) {
+      return (
+        <div className="minigame digital-forensics-enhanced tier-k5">
+          <div className="k5-complete">
+            <div className="k5-byte-row">
+              <div className="k5-byte-avatar">🕵️</div>
+              <div className="k5-byte-bubble">You cracked every case — sharp eyes, Detective! 🎉</div>
+            </div>
+            <div className="k5-complete-title">🎉 Great work, Detective!</div>
+            <div className="k5-complete-score">You solved {k5SolvedIds.length} of {K5_MYSTERIES.length} cases!</div>
+            <div className="k5-complete-rank">{getDetectiveRank(k5SolvedIds.length, K5_MYSTERIES.length)}</div>
+            <div className="k5-complete-tip">Great detectives pay attention to small details — just like spotting something unusual online.</div>
+            <div className="k5-learned">📋 What You Learned: This is called <strong>DIGITAL FORENSICS</strong> — looking closely at evidence to figure out what happened, just like a detective examining clues at a scene.</div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="minigame digital-forensics-enhanced tier-k5">
+        <h3 className="k5-crypto-title">🕵️ Digital Forensics: Find the Clues</h3>
+        {k5SolvedIds.length === 0 && !k5Mystery && (
+          <>
+            <p className="k5-instructions">Be a detective! Pick something to investigate and look for clues. 🔍</p>
+            <div className="k5-tip">🧠 Cyber Term: <strong>Digital Forensics</strong> means looking closely at evidence (clues) to figure out what happened — like a detective examining footprints at a scene, but for computers.</div>
+            <div className="k5-practice-banner">🎮 This is practice! Take your time looking for clues — there's no rush.</div>
+          </>
+        )}
+
+        <div className="k5-byte-row">
+          <div className="k5-byte-avatar">🕵️</div>
+          <div className="k5-byte-bubble">{!k5Mystery ? "Pick a case — let's do some digital forensics and find the evidence! 🔍" : k5Done ? 'Case closed — great forensic work, Detective! 🌟' : 'Looking for evidence... keep your eyes sharp!'}</div>
+        </div>
+
+        {!k5Mystery ? (
+          <>
+            <div className="k5-file-grid">
+              {k5RemainingMysteries.map(mystery => (
+                <div key={mystery.id} className="k5-email-card k5-file-card k5-case-card" onClick={() => k5Investigate(mystery)}>
+                  <div className="k5-email-row">{mystery.emoji} <strong>{mystery.name}</strong></div>
+                  <div className="k5-email-body">{mystery.description}</div>
+                </div>
+              ))}
+            </div>
+            {k5SolvedIds.length > 0 && (
+              <div className="k5-answer-buttons">
+                <button className="k5-next-btn" onClick={k5FinishCases}>🏁 I'm Done — See My Rank</button>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="k5-email-card">
+              <div className="k5-email-row">{k5Mystery.emoji} <strong>{k5Mystery.name}</strong></div>
+              <div className="k5-email-body">{k5Mystery.description}</div>
+            </div>
+
+            {k5CluesFound.length > 0 && (
+              <div className="k5-feedback info">
+                <div className="k5-feedback-title">🔎 Clues Found</div>
+                {k5CluesFound.map((clue, index) => (
+                  <div key={index} className="k5-feedback-why">• {clue}</div>
+                ))}
+              </div>
+            )}
+
+            {k5Investigating && <div className="k5-progress">Investigating...</div>}
+
+            {k5Done && (
+              <div className="k5-feedback success">
+                <div className="k5-feedback-title">🌟 Case Solved!</div>
+                <div className="k5-feedback-why">You found all {k5Mystery.clues.length} clues!</div>
+                <div className="k5-answer-buttons">
+                  {k5RemainingMysteries.length > 0 ? (
+                    <button className="k5-next-btn" onClick={k5NextCase}>🔍 Investigate Another Case</button>
+                  ) : null}
+                  <button className="k5-next-btn" onClick={k5FinishCases}>🏁 I'm Done — See My Rank</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="minigame digital-forensics-enhanced">
